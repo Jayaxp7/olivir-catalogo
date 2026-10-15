@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#bca687">
+<meta name="description" content="Catálogo de semi jóias Olivir. Escolha sua peça e fale direto no WhatsApp.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Olivir Semi Jóias</title>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: phone-first catalogue. Sticky wordmark bar, one quiet totals line,
+   photo-led grid, and a bottom sheet (dialog) for the piece and its sale notes. */
+:root{
+  --bg:#fdfbf7;
+  --surface:#f5eee2;
+  --surface-2:#ebe2d2;
+  --ink:#2f261b;
+  --muted:#6a5a46;
+  --line:#e3d9c7;
+  --field-line:#9a8870;
+  --gold:#bca687;
+  --on-gold:#2a2118;
+  --gold-text:#6e5636;
+  --cream:#fef6e9;
+  --ok:#2f6b4a;
+  --err:#a8321f;
+  --on-err:#ffffff;
+  --shadow:rgba(47,38,27,.25);
+  --r:8px;
+  --font-display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --font-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1d1812;--surface:#27211a;--surface-2:#342c22;--ink:#f4ede1;--muted:#b3a48d;--line:#3a3227;
+    --field-line:#7c6d58;--gold:#bca687;--on-gold:#231c13;--gold-text:#d3bf9f;--ok:#8fc59b;--err:#ff9a87;
+    --on-err:#2a0d08;--shadow:rgba(0,0,0,.6);color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1d1812;--surface:#27211a;--surface-2:#342c22;--ink:#f4ede1;--muted:#b3a48d;--line:#3a3227;
+  --field-line:#7c6d58;--gold:#bca687;--on-gold:#231c13;--gold-text:#d3bf9f;--ok:#8fc59b;--err:#ff9a87;
+  --on-err:#2a0d08;--shadow:rgba(0,0,0,.6);color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100%}
+body.lock{overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+h1,h2,h3,p,ul,dl,dd{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+:focus-visible{outline:2px solid var(--gold-text);outline-offset:2px}
+
+/* Bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);border-bottom:1px solid var(--line);z-index:10}
+.bar-in{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{width:46px;height:46px;flex:none;display:block}
+.brand-lock{display:grid;gap:7px;min-width:0}
+.brand-word{display:block;height:24px;width:auto;fill:var(--ink)}
+.brand-sub{display:block;font-size:10px;font-weight:500;letter-spacing:.34em;text-transform:uppercase;color:var(--muted);line-height:1;padding-left:2px}
+.brand-tag{display:none;font-size:13px;color:var(--muted);margin-left:10px}
+@media(min-width:720px){.brand-tag{display:block}.brand-word{height:28px}.brand-sub{font-size:11px}}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:var(--r);border:1px solid transparent;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap;transition:transform .12s ease,background-color .2s ease,border-color .2s ease}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.6;cursor:default}
+.btn-gold{background:var(--gold);color:var(--on-gold)}
+.btn-gold:hover:not([disabled]){background:color-mix(in srgb,var(--gold) 88%,var(--ink))}
+.btn-ghost{background:transparent;border-color:var(--field-line);color:var(--ink)}
+.btn-ghost:hover:not([disabled]){background:var(--surface-2)}
+.btn-danger{background:var(--err);color:var(--on-err)}
+.link{background:none;border:0;padding:10px 4px;min-height:44px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:14px}
+.link:hover{color:var(--ink)}
+
+/* Page */
+main{max-width:1240px;margin:0 auto;padding-block:8px 40px}
+.notice{margin:14px 0 0;padding:10px 12px;border:1px solid var(--field-line);border-radius:var(--r);font-size:14px;color:var(--ink);background:var(--surface)}
+.totals{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:10px clamp(8px,2.6vw,40px);padding-block:22px 4px}
+.totals>div{display:grid;gap:2px;min-width:0}
+@media (max-width:560px){.totals .lbl{font-size:10px;letter-spacing:.04em}.totals .num{font-size:clamp(11px,3.5vw,16px);letter-spacing:-.02em;white-space:nowrap}}
+.lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--font-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.controls{display:grid;gap:12px;padding-block:16px 24px}
+@media(min-width:720px){.controls{grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:20px}}
+.field{display:grid;gap:6px;min-width:0}
+.field>label,legend{font-size:13px;font-weight:600}
+.help{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--err);font-weight:500}
+input[type=text],input[type=search],input[type=date],input[type=number],input[type=email],input[type=password],textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--field-line);border-radius:var(--r);background:var(--bg);font-size:16px}
+textarea{resize:vertical;min-height:112px;line-height:1.45}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
+input[aria-invalid=true],textarea[aria-invalid=true]{border-color:var(--err)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:46px;padding:0 14px;border:1px solid var(--field-line);background:transparent;border-radius:var(--r);font-weight:500;font-size:14px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .n{font-family:var(--font-mono);font-size:12px;opacity:.75;margin-left:6px}
+
+/* Grid */
+.grid{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 14px}
+@media(min-width:720px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 20px}}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1280px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.tile{display:grid;gap:5px;width:100%;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer;align-content:start;border-radius:var(--r)}
+.t-photo{display:block;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;background:var(--surface-2);margin-bottom:4px}
+.t-photo img,.s-photo img,.pf-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.t-photo img{transition:transform .5s cubic-bezier(.16,1,.3,1),filter .3s ease,opacity .3s ease}
+.tile:hover .t-photo img{transform:scale(1.03)}
+.tile:active{transform:scale(.985)}
+.tile.is-sold .t-photo img{filter:grayscale(.9);opacity:.55}
+.noimg{display:grid;place-items:center;width:100%;height:100%;color:var(--muted);font-size:13px;text-align:center;padding:8px}
+.t-name{font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.t-meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.t-code{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.t-price{font-family:var(--font-mono);font-size:14.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.tile.is-sold .t-price{color:var(--muted)}
+.t-comm{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);margin-top:-2px}
+.t-comm span,.s-comm span{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:500}
+.s-comm{font-size:14px;color:var(--muted)}
+.t-status{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.t-status.ok{color:var(--ok);font-weight:600}
+.t-due{font-size:12.5px;color:var(--muted)}
+
+/* States */
+.state{max-width:760px;padding-block:40px 24px}
+.empty{display:grid;gap:26px;align-items:center;justify-items:start}
+@media(min-width:720px){.empty{grid-template-columns:auto minmax(0,1fr);gap:44px}}
+.badge{display:block;width:min(100%,230px);height:auto;flex:none}
+.state h2{font-family:var(--font-display);font-weight:600;font-size:36px;line-height:1.05;text-wrap:balance}
+.state p{color:var(--muted);margin:12px 0 22px;max-width:46ch}
+.sk{display:grid;gap:8px}
+.sk-ph,.sk-l{display:block;border-radius:var(--r);background:var(--surface-2)}
+.sk-ph{aspect-ratio:4/5}
+.sk-l{height:12px;width:80%}
+.sk-l.s{width:45%}
+@media(prefers-reduced-motion:no-preference){
+  .sk-ph,.sk-l{background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface) 50%,var(--surface-2) 70%);background-size:300% 100%;animation:shim 1.4s linear infinite}
+  @keyframes shim{from{background-position:100% 0}to{background-position:0 0}}
+  .s-in{animation:sheetIn .35s cubic-bezier(.16,1,.3,1)}
+  @keyframes sheetIn{from{transform:translateY(22px)}to{transform:none}}
+}
+.ro .bar [data-act="new"]{display:none}
+.foot{max-width:1240px;margin:0 auto;padding-block:8px 36px}
+
+/* Sheet */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);width:min(960px,calc(100% - 32px));max-width:100%;max-height:100dvh;overflow:auto;border-radius:var(--r);box-shadow:0 30px 80px var(--shadow)}
+dialog::backdrop{background:rgba(24,17,9,.62)}
+@media(max-width:719px){dialog{width:100%;margin:auto 0 0 0;max-height:94dvh;border-radius:var(--r) var(--r) 0 0}}
+.s-grid{display:grid;gap:20px;padding:18px max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+@media(min-width:720px){.s-grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:32px;padding:26px 28px 30px}}
+.s-photo,.pf-frame{aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;background:var(--surface-2);max-height:52dvh;width:100%}
+@media(min-width:720px){.s-photo,.pf-frame{max-height:none}}
+.s-main{display:grid;gap:12px;align-content:start;min-width:0}
+.s-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.s-status{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.s-status.ok{color:var(--ok)}
+.s-name{font-family:var(--font-display);font-weight:600;font-size:34px;line-height:1.05;overflow-wrap:anywhere;text-wrap:balance}
+.s-code{font-family:var(--font-mono);font-size:14px;color:var(--muted)}
+.s-price{font-family:var(--font-mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.sale{display:grid;grid-template-columns:minmax(96px,128px) minmax(0,1fr);gap:10px 14px;margin:6px 0 2px;padding-top:14px;border-top:1px solid var(--line)}
+.sale dt{font-size:13px;color:var(--muted)}
+.sale dd{overflow-wrap:anywhere;white-space:pre-wrap}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.confirm{display:grid;gap:12px;padding:14px;border:1px solid var(--field-line);border-radius:var(--r);margin-top:8px}
+.form{display:grid;gap:16px;min-width:0}
+.form h3{font-family:var(--font-display);font-weight:600;font-size:25px;line-height:1.1}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg label{display:grid;place-items:center;min-height:46px;border:1px solid var(--field-line);border-radius:var(--r);cursor:pointer;font-weight:500;background:var(--bg);text-align:center;padding:0 6px}
+.seg input:checked+label{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg input:focus-visible+label{outline:2px solid var(--gold-text);outline-offset:2px}
+.pf-col{display:grid;gap:12px;align-content:start}
+.pf-col .btn{width:100%}
+.pf-pick:focus-visible+label{outline:2px solid var(--gold-text);outline-offset:2px}
+
+/* Login */
+.login{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:24px}
+.login form{display:grid;gap:16px;width:min(380px,100%)}
+.login h2{font-family:var(--font-display);font-weight:600;font-size:34px;line-height:1.05}
+/* Toast */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:var(--r);font-weight:500;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:30}
+</style><style>
+.tile.is-sold .t-photo{position:relative}
+.selo{position:absolute;left:8px;top:8px;background:var(--ink);color:var(--bg);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:4px 8px;border-radius:var(--r)}
+.t-photo{position:relative}
+.btn-wa{width:100%;text-decoration:none}
+.btn-wa[aria-disabled=true]{opacity:.6;pointer-events:none}
+.count{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="lg-neck" fill-rule="evenodd" d="M630.3,651.2C635.3,650 639.6,646.4 641.6,641.8C642.9,638.7 643.1,637.7 642.9,633.9C642.8,629.8 641.9,626.8 639.7,622.5C638.1,619.2 638,619 634.5,613.5C632.8,610.8 631.3,608.4 631.3,608.3C631.3,607.8 633.6,604.6 636.1,602C649.5,587 664.8,566.9 673.1,553.3C673.5,552.5 675,550.3 676.2,548.3C677.4,546.4 679.7,542.7 681.2,540C694.4,516.7 698.2,511.2 711.4,496.3C726.6,479 731.9,470.1 736.1,454.7C737.9,448.2 738.8,435 738,428.2C736.8,418.1 735.8,413 731.8,396.5C731.3,394.7 730.6,391.4 730.1,389.3C729.7,387.2 729.1,384.6 728.8,383.5C728.6,382.4 728.1,379.9 727.8,378C727.5,376.1 727.1,373.1 726.8,371.5C726.5,369.8 726.3,367.9 726.3,367.3C726.3,366.7 726.2,363.7 726,360.7C725.7,355 725.9,350.6 726.8,344.2C727.1,342.3 727.4,340.1 727.5,339.2C727.7,337.4 728.1,336.4 729.8,332.5C730.4,331 731.8,327.7 732.9,325.2C737.2,315.1 739.9,305.2 741.7,292.8C742.1,289.7 742.1,277.1 741.7,274.6C740.5,267.6 739.8,264.7 738.7,261.5C734.7,250.3 727.6,242.9 716.7,238.7C715.7,238.3 713.8,237.4 712.5,236.8C709.9,235.6 706.8,234.7 705,234.7C704.3,234.7 703.3,234.3 702.5,233.8C700.6,232.7 697.7,232.7 695,233.8C692.7,234.8 688,235 684.1,234.3C682.4,234 681.8,234 681.3,234.3C680.4,234.8 679.2,234.8 676.4,234C669.3,232.2 665.1,227.9 663.3,220.7C662.2,216.4 663.1,211.8 665.5,209C668.5,205.6 668.5,205.6 669.7,206.1C672.5,207.2 677.7,203.6 678.2,200.3C678.6,198 674.7,194 672.2,194C670.8,194 668.3,195.6 667,197.4C665.7,199.2 665.4,200.7 666.2,202.3L666.7,203.6L665,205.8C660.4,211.9 659.2,217.3 661.2,223.4C663.4,230.2 668,234.6 675,236.5C676.7,237 679,237.2 685.2,237.3L693.2,237.5L694.7,238.7C696.8,240.4 697.4,240.7 699.6,240.7C701.2,240.7 701.8,240.5 703,239.7C704.6,238.5 704.8,238.5 710.3,239.6C714.3,240.3 715.3,240.9 719.4,244.9C721.3,246.8 723.1,248.3 723.4,248.3C724.2,248.3 724.2,248.1 723,246.3C721.1,243.4 722.5,243.9 726.8,247.8C736.5,256.3 740.9,272.8 738.8,292.6C737.8,302 736.4,307.9 732.6,318.3C729.8,326.1 729.1,327.6 727.7,328.9C726.9,329.6 726.5,330.5 725.8,333.3C725.3,335.3 724.3,338.2 723.6,339.8C721.7,343.9 719.2,351.8 718.3,356C717.1,362.1 716.2,370.8 716.5,374.7C716.9,380.6 717.7,387.8 718.7,393.5C718.9,394.8 719.2,396.7 719.3,397.8C719.5,398.9 719.8,400.8 720,402C721.1,409.5 721.5,414.4 721.5,423C721.4,433 720.8,437.7 718.3,445.5C714.6,457.4 709.6,466.8 701.7,476.8C700.5,478.3 699,480.3 698.2,481.3C697.5,482.3 693.5,487.1 689.5,492C685.5,496.9 681.4,501.8 680.5,503C679.6,504.2 677.8,506.4 676.5,508C675.2,509.6 671.4,514.5 668,519C657.5,533 647.4,545.8 641.4,552.6C638.9,555.5 635.9,558.9 634.8,560.1C631.5,564 631.7,563.9 630,562.5C629.2,561.9 628.3,561.3 628,561.3C626.9,561.3 625.2,562.2 624.4,563.1C623.9,563.6 623.4,564 623.3,564C622.4,564 609.2,552.5 602.2,545.7C585.5,529.2 572.3,512.5 566,500.1C563.3,494.6 562.9,493.6 561.4,489.1C560.2,485.5 559.8,483.6 558.6,477.2C557.9,472.9 558.1,462 559,457.2C559.2,456.2 559.6,453.8 560,451.7C560.4,449.6 560.9,446.9 561.2,445.7C561.8,442.8 563,436.2 563.4,432.8C563.9,428.8 563.9,415.3 563.4,412.3C561.6,402.1 558.1,395.2 547.8,381.5C539.1,369.9 535.2,363.7 530.4,354C522.4,338 518.7,323.9 517.8,306.5C517.5,298.1 519.1,286.3 521.6,278.8C527.8,261 544,249.8 562.2,250.7C564.8,250.8 566.5,251 567.2,251.4C567.8,251.7 569,252 569.7,252.2C570.5,252.3 571.6,252.7 572,253C573.5,254 582.2,254.1 584.3,253.1C588,251.4 589.4,248.3 587.5,245.8C585.7,243.4 582.2,242.5 578.2,243.5C575.1,244.2 574.5,244.1 573.9,243.2C572.9,241.7 572.1,242.2 571.5,244.7C571.4,245.3 570.9,245.8 570.1,246.2C569.4,246.5 568.2,247.1 567.3,247.5C565.9,248.2 565.3,248.3 559.2,248.4C553.3,248.5 552.1,248.7 549,249.5C542.6,251.1 536.6,254.5 531.9,259C522.9,267.5 515.6,280.2 512.5,292.4C512.1,294.1 511.3,297.3 510.7,299.5C508.5,307.8 507.6,315.3 507.6,325.2C507.6,331.8 507.7,333.6 508.4,338.3C509.4,346.5 512.5,357.1 515.8,364.7C518.9,371.7 525,381 531.4,388.7C537.7,396.3 540.8,400.6 543.1,405.2C544.5,408 546.7,413.3 546.7,414C546.7,414.2 546.9,415.1 547.2,416C548.2,419.3 548.4,422.2 548.2,429.4C548.1,433.3 547.9,437.6 547.7,438.8C547,443.4 546,450.2 545.5,452.7C545.3,454 544.7,457.6 544.3,460.5C544,463.4 543.5,466.8 543.3,468.1C542.9,471.2 542.9,474.5 543.5,480.8C544.7,494 547.8,504.6 554.4,518.3C563.3,536.8 575.9,553.8 600.5,580.5C607.4,588 610.5,591.5 612,593.8C612.8,594.9 615.3,598 617.5,600.5C621.4,605.1 623,607.3 623,608C623,608.2 622.5,609 622,609.8C620.1,612.4 616,618.8 614.7,621.3C610.2,630 609.5,637.1 612.6,642.7C616.1,649.2 623.7,652.8 630.3,651.2ZM620.2,598.4C618.3,596.3 615.4,593 613.8,591.1C609.5,586.2 601.8,577.6 597,572.4C583.8,558.1 572.9,544.2 566.1,533.3C555,515.5 548.4,498.9 546.4,483.2C545.4,475.6 545.7,464.2 547.1,455.2C547.4,452.8 547.9,449.9 548,448.7C548.4,445.9 548.8,443.3 549.6,439.3C551.6,429.8 551.4,419.8 549.1,412C548.1,408.7 545.4,402.9 543.5,399.8C541.7,397 538,392.1 531.5,384C519.3,368.7 512.1,351.3 510.7,333.2C510.2,328 510.3,315.5 510.7,312.3C510.9,311 511.2,308.1 511.5,306C512.4,298.6 513.6,293.1 514.8,291.1C516.1,289 516.2,289.5 515.5,295.5C514.8,301.7 515,311.8 516,317.8C517.6,327.6 519.8,336.8 521.8,342C524.4,348.7 524.8,349.6 526.8,353.9C530.7,362 539.5,375.9 545.3,383C546.9,384.9 551.5,391.5 553.3,394.4C561.4,407.4 563.3,422.4 559.2,442.5C556.3,456.2 556,458 555.6,461.8C554.3,474.5 555.7,483.9 560.8,496.1C563.3,502.3 569,511.8 573.8,518C585.9,533.7 595.8,544.2 611.3,558C614.1,560.5 617.8,563.6 619.3,564.7C623.2,567.7 623.2,567.6 621,569.7C614.7,575.8 617,585.1 625.3,587C631.3,588.4 637,583.6 637,577.1C637,574.5 636.1,572.4 633.9,570.1C632.6,568.7 632.3,568.2 632.4,567.6C632.6,567.2 634.1,565.3 635.9,563.3C639.4,559.5 645.3,552.6 650.5,546C652.3,543.7 656.1,539 658.8,535.5C661.6,532 665.7,526.7 668,523.7C676.3,512.6 682.1,505.3 697,487.3C702.9,480.3 704.7,477.8 709.2,471.2C719.6,455.6 723.8,442.3 724.5,422.8C724.7,418 724.6,416.1 723.9,409.8C722.9,401.5 721.6,391.8 720.8,386.7C719.4,378.2 719.3,368.4 720.3,361.5C721.6,353.2 722.4,349.7 723.3,349.4C723.6,349.3 723.7,350.4 723.5,355.4C723.3,361.8 723.8,370 724.8,375.5C725.1,377 725.5,379.1 725.7,380.2C726.4,384.4 727.8,391.2 730.1,400.7C730.9,404.1 731.7,407.3 731.8,407.8C731.9,408.4 732.3,410.3 732.7,412C734.8,421.2 735.2,425 735.1,436.3C735.1,446.2 735.1,446.6 733.7,453.4C733,456.9 730.2,464.5 727.9,469C724.2,476.4 718.7,484.3 710.6,493.5C697,509.1 691.4,516.8 681.1,534.7C670.3,553.4 665.6,560.5 656,573.3C649.1,582.5 647.4,584.6 639.7,593.2C633.9,599.7 631.4,602.3 631,602.3C630.8,602.3 630.1,602 629.5,601.5C628.8,601 627.8,600.7 627.3,600.7C626.8,600.7 625.9,601 625.4,601.5C624.8,602 624.3,602.3 624.1,602.3C623.9,602.3 622.1,600.6 620.2,598.4ZM728.1,325.5C728.8,323.9 729.1,321.7 728.7,321.7C728.3,321.7 727.3,324.7 727.3,325.9C727.3,327 727.6,326.9 728.1,325.5ZM730.6,311.2C730.8,310.7 731.4,308.4 731.9,306.2C732.8,302.3 732.8,301.9 732.8,292.5C732.8,282.4 732.5,279 731,271.3C730.3,268.1 729.8,267.1 729.2,267.6C729,267.8 729.1,269.1 729.3,271.2C729.6,273.1 729.7,275.1 729.5,275.7C729.2,277.4 729.2,277.8 729.7,281.7C729.9,283.6 730.2,288.3 730.3,292.2C730.4,296 730.6,299.3 730.7,299.5C730.9,299.7 730.8,300.9 730.6,302.2C729.7,308.5 729.4,311.8 729.5,312C729.9,312.6 730.3,312.3 730.6,311.2ZM577.9,250.1C575.8,249.1 575.9,248.2 578.1,246.9C580.7,245.2 584.4,245.4 585.5,247.2C586.2,248.1 585.8,248.9 584.2,250.2C582.7,251.3 580.1,251.3 577.9,250.1ZM697,237.9C696.5,237.6 696,237.1 695.9,236.8C695.1,234.9 700.1,234.3 702,236C702.7,236.7 702.7,236.8 702.1,237.4C701.3,238.2 698.1,238.5 697,237.9Z"/><path id="lg-word" fill-rule="evenodd" d="M1023.7,854.2C1029.2,853 1032.3,852 1037,849.8C1039.1,848.8 1044.7,845.3 1045.3,844.7C1045.4,844.6 1046.5,843.7 1047.7,842.7C1050.1,840.6 1052.7,838 1052.7,837.6C1052.7,837.4 1051.5,838.2 1050.4,839.4C1049.2,840.5 1041.6,846 1041.1,846C1041.1,846 1040.4,846.4 1039.7,846.8C1031.8,851.8 1018.3,853.7 1008.3,851.2C991.1,846.9 976.7,835.1 957.6,809.6C945.1,792.8 941.1,788.3 934.6,783.4C928.7,778.9 921.1,775.2 915.2,774C913.2,773.6 912.7,772.8 914.2,772.5C922.1,770.9 932.9,766.1 938.6,761.7C947.5,754.8 952.3,747 953.6,737.2C954.8,728.7 952.4,719.4 947.5,713.3C943.7,708.4 936,703.8 929,702C924.4,700.9 920.3,700.7 895.2,700.7C871,700.6 862.5,700.8 861.9,701.3C861.7,701.5 862.4,702 863.5,702.5C865.7,703.6 866.7,704.8 867.9,708.5L868.8,711.2L868.8,763.8C868.8,813.3 868.8,816.7 868.2,819C867.2,823.1 865.8,825.1 863.2,826C862.5,826.2 862,826.5 862,826.7C862,827.1 886.6,827.1 886.8,826.7C886.9,826.5 886.8,826.2 886.4,826.1C883.7,825.3 882,823.3 880.9,819.7C880.3,817.6 880.2,816.3 880.1,796.7C880,785.3 880,775.6 880.1,775.1L880.3,774.3L892.5,774.3L904.6,774.3L907.4,775.2C917.6,778.4 924.7,785.1 939.2,805.2C952.4,823.5 958.7,830.8 968.3,838.6C970.2,840.2 978.7,846 979.1,846C979.2,846 980,846.4 980.9,846.9C986.8,850.4 995.3,853.3 1002.2,854.3C1003.6,854.5 1005.1,854.8 1005.3,854.8C1006.7,855.2 1021.7,854.7 1023.7,854.2ZM359.7,830.3C367.2,829.2 376,826.4 383.1,822.8C401.5,813.5 414.9,797.1 419.9,777.7C421.5,771.4 422.2,761 421.3,755.3C419.6,743.6 417.8,738.5 412.3,729.5C403.5,715 388.8,704.6 370.5,699.9C366.1,698.7 356.1,697.7 349.7,697.7C325.2,697.6 300.8,710.6 287.7,730.5C282.1,739 278.9,747.5 277.7,756.8C276.5,765.3 276.8,772.1 278.7,781C280.3,789 285.5,799.3 291.4,806.6C301.1,818.5 318.8,827.9 335.8,830.1C337.3,830.3 339.4,830.5 340.5,830.7C343.2,831 356.5,830.8 359.7,830.3ZM706.1,828.4C706.6,827.4 713.9,810.6 718.4,800C719.7,797 721.2,793.4 721.7,792.2C722.3,790.9 723.1,788.9 723.6,787.8C724,786.7 724.7,785.1 725.1,784.2C725.9,782.5 728.3,776.8 732.7,766.5C734.7,761.7 737.8,754.6 740,749.5C740.3,748.8 741.6,745.8 742.9,742.8C745.3,737.4 751.6,722.8 754.1,716.8C756.9,710.4 758.8,707.2 761.4,704.8C763.2,703.1 764.2,702.6 766.8,701.8C767.9,701.5 768.7,701.1 768.7,700.8C768.7,700.4 766.9,700.3 757.3,700.3C745.1,700.3 744.5,700.4 747.9,701.8C751.4,703.2 752.7,705.4 752.7,709.8C752.7,711.7 752.5,713 752.1,714.3C751,717.3 746.2,728.9 744.2,733.3C743.1,735.6 741.7,739 740.9,740.8C740.2,742.7 739.2,745 738.8,746C738.3,746.9 737,750.1 735.8,753C734.6,755.8 733.1,759.3 732.5,760.7C731.5,762.9 725,778 722.7,783.3C719.4,790.9 711.4,810.1 711,811.2C710.3,812.9 709.5,813.1 709,811.5C708.8,810.8 707.9,808.8 707.1,807C706.3,805.3 705,802.3 704.2,800.3C700.4,791.2 699,787.8 696.8,782.8C695.6,780 694.2,776.8 693,773.7C691.8,770.7 690.5,767.6 688.5,763.2C688.3,762.6 687.7,761.3 687.3,760.3C686.9,759.3 685.1,755.1 683.3,750.8C681.5,746.6 679.1,740.9 678,738.2C676.9,735.4 675.7,732.7 675.5,732.2C674.1,729.1 670.6,720.7 669.4,717.8C665.7,708.6 666.3,703.5 671.1,701.8C674.8,700.4 673.9,700.3 658.7,700.3C650.8,700.2 644.1,700.2 643.8,700.2C643.4,700.2 643.1,700.4 643.1,700.7C643,701 643.7,701.4 645.2,702C647.1,702.6 647.9,703.1 649.8,705.2C652.5,707.9 653.6,709.9 657.3,718.7C658.5,721.7 659.9,724.8 660.3,725.7C661.4,728.2 662.8,731.4 668,743.8C674,758 677.2,765.4 682.7,778.3C684.9,783.6 687.3,789.1 687.9,790.7C688.5,792.2 691.3,798.9 694.2,805.5C697,812.1 700.3,819.9 701.5,822.8C702.7,825.8 703.9,828.4 704.1,828.8C704.5,829.6 705.6,829.5 706.1,828.4ZM342.5,828.3C335,826.9 331.1,825.6 325.3,822.6C306.9,812.9 293.5,793 290.9,771.4C290,763.9 290.5,753.8 292,746.2C296.3,725.3 311.6,708 330.8,702.3C349.2,696.8 367.9,700.2 382.2,711.6C394.9,721.9 403.7,736.3 407,752.7C408.5,759.7 408.5,773.1 407.2,779.2C404.3,791.8 401.5,798.3 394.9,807.6C389.7,815 381.7,821.3 373.6,824.6C370.6,825.8 364.9,827.4 361.5,828C358.7,828.5 344.9,828.7 342.5,828.3ZM546.4,822.1C546.7,819.6 547.2,815.5 547.5,813C547.8,810.5 548.2,807.3 548.5,805.9C548.8,804.5 548.9,803.2 548.8,803C548.4,802.2 547.8,802.8 547.2,804.6C545.2,810.6 541.2,815.8 535.6,819.6C532.6,821.7 526.7,824 524.5,824C524,824 522.8,824.2 522,824.4C521.1,824.6 512.9,824.7 500.2,824.8C477.4,824.8 478.7,825 478.6,822.4C478.4,809.8 478.7,713.2 479,711C479.6,706.6 480.7,704.6 483.6,702.6L485.2,701.5L473.3,701.3C466.8,701.2 461.3,701.2 461.1,701.3C460.4,701.5 460.6,701.8 462.3,702.8C464.1,703.8 465.2,705.2 466.4,708.5L467.2,710.5L467.2,763.3C467.2,813.2 467.1,816.3 466.6,818.7C465.6,822.7 463.6,825.7 461.5,826C461.2,826.1 460.8,826.4 460.8,826.6C460.6,827 543.7,827.4 545.2,827C545.8,826.8 545.9,826.2 546.4,822.1ZM607.3,826.7C607.3,826.5 606.8,826.2 606.2,826C603.8,825.2 601.6,821.9 601,818.1C600.4,814.9 600.2,717.6 600.7,713.2C601.4,707.1 602.6,704.4 605.4,702.8C606.3,702.3 607,701.7 607,701.6C607,701.4 601.6,701.3 595,701.3C587.8,701.3 583,701.5 583.1,701.6C583.1,701.8 583.9,702.4 584.8,703.1C587,704.5 588.4,707.3 589.1,711.3C589.7,715.3 589.7,813 589.1,817.4C588.5,821.9 586.4,825.3 583.9,825.9C583.3,826.1 582.8,826.4 582.7,826.6C582.6,826.9 585.5,827 595,827C602.3,827 607.3,826.9 607.3,826.7ZM821.6,826.6C821.5,826.4 821,826.1 820.5,826.1C819.1,825.9 816.9,823.5 816,821.2C814.8,818 814.6,809.8 814.7,758.2C814.8,714.4 814.9,711 815.4,709.2C816.5,705.7 818,703.7 820.9,702C821.2,701.9 821.4,701.6 821.3,701.5C821,701.2 797.2,701.2 797.1,701.6C797,701.8 797.5,702.3 798.3,702.6C800.9,704 802.4,706.6 803.2,711.3C803.6,713.9 803.7,721.1 803.6,766L803.5,817.8L802.6,820.5C801.6,823.4 799.9,825.5 798.2,825.9C797.6,826.1 797.2,826.4 797.1,826.6C797,826.9 799.9,827 809.3,827C819.1,827 821.7,826.9 821.6,826.6ZM880.1,771.5C880,771.3 880,755.8 880.1,737.2C880.2,707.5 880.2,703.3 880.7,703C881.5,702.4 912.1,702.6 916,703.2C921.1,703.9 925,705.5 929.2,708.5C937.3,714.3 942,727.4 940.4,740C940,743.5 938.1,749.6 936.3,753C933.1,759.5 927.4,765.1 921,768.1C913.7,771.6 910.6,772 893.6,772C882.6,772 880.3,771.9 880.1,771.5Z"/><path id="lg-rest" fill-rule="evenodd" d="M627.7,906.3C630,897.2 633.9,892.6 641.5,890C643.2,889.5 644.9,889 645.2,889C645.9,889 645.6,888.2 644.8,888.1C643.4,887.8 640.7,886.9 638.1,885.6C632.6,883 629.2,878.3 627.6,871.3C626.9,868.1 626.5,867.6 626.2,869.6C625.2,875.3 622.3,880.5 618.3,883.6C616.1,885.3 611.1,887.5 608.8,887.9C608,888.1 607.3,888.3 607.3,888.5C607.3,888.7 608.6,889.2 610.3,889.7C619.6,892.4 624,897.8 626.2,909.5C626.5,910.9 626.7,910.4 627.7,906.3ZM753.8,890.5C763.7,890.4 786.1,890.3 803.5,890.2C867.7,889.8 897.8,889.6 899.4,889.4C901.2,889.1 901.2,889.1 898.3,888.9C895.1,888.7 869.6,888.4 823.5,888.2C805.7,888.1 783.1,887.9 773.3,887.8C715.1,887.3 685.7,887.2 685.2,887.7C684.5,888.2 684.5,890.2 685.2,890.6C685.8,891 712.8,890.9 753.8,890.5ZM567.7,890.2C568.3,889.5 567.9,888.2 567,887.7C566.2,887.3 523.4,887.4 493.2,887.8C487.5,887.9 463,888.1 438.7,888.2C383.1,888.4 349.8,888.7 347,889C345.1,889.2 345.4,889.3 349.3,889.3C351.8,889.4 355.6,889.4 357.8,889.5C360,889.5 380,889.7 402.2,889.8C424.3,890 455,890.2 470.3,890.3C524.6,890.8 567.2,890.7 567.7,890.2Z"/><path id="lg-sub" fill-rule="evenodd" d="M683.8,961C691,958.5 694,950.7 690.5,943.7C688.6,939.9 684.9,937.6 680.3,937.4C677.6,937.3 677.2,937.3 675.2,938.2C666,942.6 665.4,955.6 674.3,960.3C677.7,962.1 680.2,962.3 683.8,961ZM802.8,961C805.4,960 807,957.7 807,955.1C807,951.3 805.2,949.7 799.1,948C796.2,947.2 794.9,946.4 794.2,945C793.5,943.8 793.5,943.2 794.2,941.8C795.6,938.9 801.1,938.3 803.9,940.8C804.5,941.3 804.7,941.4 805.2,941C806.1,940.2 805.8,939.2 804.2,938.4C798,935.4 791.7,938.1 791.7,943.8C791.7,946.8 793.7,948.7 798.8,950.3C804.1,952 805.8,954.2 804.2,957.3C802.7,960.1 796.6,960.6 793.7,958.1C792.6,957.2 791.8,957.2 791.2,958.1C790.7,958.8 791.3,959.5 793.5,960.5C796.3,961.9 800,962.1 802.8,961ZM455,961.3C457.1,960.7 458.9,958.9 459.5,956.9C460.7,952.8 458.6,949.8 453.5,948.3C448.2,946.8 447.1,946.1 446.8,943.9C446.3,941 449.1,938.7 452.4,939.1C453.9,939.3 455.6,940 457.1,941.1C457.7,941.6 458.7,940.9 458.7,940C458.7,938.8 455,937.3 452.2,937.2C447.2,937.1 443.3,941.4 444.7,945.5C445.4,947.6 447.6,949.2 451.8,950.5C456.2,951.9 457.3,952.8 457.6,955.1C458,959.9 450.9,961.7 446,958C444.3,956.6 443,958 444.6,959.5C446.6,961.4 451.7,962.3 455,961.3ZM500.4,960.9C500.8,959.8 500.1,959.7 494.3,959.5C490,959.4 488.5,959.3 488.3,958.9C487.9,958.3 487.9,950.7 488.4,950.5C488.6,950.3 490.8,950.3 493.3,950.3C498.2,950.4 499.6,950 498.7,948.9C498.3,948.4 497.3,948.3 493.2,948.3L488.2,948.2L488.1,944.2C488,941.9 488.1,940.1 488.3,939.9C488.5,939.7 491,939.5 494,939.5C499.4,939.4 500.3,939.3 499.9,938.2C499.7,937.7 498.8,937.7 492.8,937.7L485.8,937.8L485.7,949.6C485.7,960.3 485.7,961.3 486.2,961.4C487.9,961.7 500.3,961.3 500.4,960.9ZM549.4,950C549.4,942.2 549.2,938.4 549,938.1C548.4,937.5 547.2,937.6 546.6,938.2C545.9,939 540.3,950.4 539.5,952.6C538.8,954.4 538.3,955.1 537.8,954.7C537.5,954.5 533.2,945.8 531.2,941C530.6,939.8 530,938.6 529.7,938.2C529.2,937.6 527.2,937.4 526.9,937.9C526.8,938.1 526.6,942.9 526.5,948.5C526.4,954.2 526.2,959.1 526.1,959.4C525.8,960.4 526.3,961.3 527.2,961.3C527.6,961.3 528,961.2 528.2,961C528.3,960.9 528.4,956.8 528.5,952.1C528.7,944.5 529,941.9 529.6,943.2C529.6,943.4 531.4,946.9 533.4,951C536.4,957 537.3,958.5 537.9,958.6C538.5,958.7 539.1,957.8 542.5,950.8C545,945.9 546.5,943.1 546.7,943.3C546.9,943.5 547.1,946.8 547.2,950.7C547.4,961.1 547.5,961.8 548.8,961.6L549.5,961.5L549.4,950ZM578.6,961.4C579.3,961 579.6,938.9 579,938.2C578.4,937.5 577.1,937.5 576.9,938.2C576.8,938.6 576.8,943.8 576.8,949.9C576.9,959.2 576.9,961.1 577.3,961.3C577.9,961.7 578.1,961.7 578.6,961.4ZM639,960.9C641.8,959.5 641.9,959 642.1,948C642.2,942.8 642.2,938.3 642,938C641.9,937.8 641.4,937.7 641,937.7L640.2,937.8L640,947.5C639.9,954.5 639.7,957.4 639.4,957.9C638.5,959.6 636.2,960 632.9,959.2C632,958.9 632,959 632.1,959.9C632.3,961.7 636.3,962.3 639,960.9ZM719.9,961.4C720.2,961.2 720.3,958.6 720.3,949.5L720.2,937.8L719.2,937.8L718.2,937.8L718.1,949.3C718,959.8 718,960.9 718.6,961.2C719.2,961.7 719.4,961.7 719.9,961.4ZM766.9,961.2C767.1,960.6 767.4,961.3 762.3,948.9C760.1,943.7 758.3,939.2 758.3,939.1C758.3,938.5 757,937.6 756.3,937.7C755.6,937.8 755.2,938.5 753.8,942.2C752.8,944.6 751.6,947.6 751,948.8C750.5,950.1 749.5,952.5 748.8,954.2C748.2,955.8 747.3,957.8 747,958.6C746,960.7 746.1,961.4 747.2,961.3C748,961.2 748.3,960.8 749.3,958.3C749.9,956.8 750.5,955.4 750.7,955.2C751.2,954.7 761.7,954.9 762.2,955.4C762.4,955.7 763,956.9 763.5,958.2C764,959.4 764.7,960.8 764.9,961.1C765.5,961.8 766.6,961.8 766.9,961.2ZM675.8,958.9C669,955.7 668.5,945 674.9,940.7C676.7,939.5 678,939.2 680.8,939.4C685.9,939.7 689,943.3 689.3,949C689.5,953.8 687.5,957.4 683.9,959C681.8,960 678,959.9 675.8,958.9ZM751.8,952.6C751.7,952.3 752.5,950.3 753.5,948.1C754.5,945.8 755.5,943.5 755.7,942.8C755.9,942 756.2,941.7 756.6,941.7C757.2,941.8 761,951.1 760.9,952.2C760.8,952.8 760.6,952.8 756.4,952.9C753,953 751.9,952.9 751.8,952.6ZM682.3,933.2C683.7,931.5 683.9,930.9 682.9,930.7C681.7,930.5 678.4,934.4 679,935.2C679.6,935.8 680.6,935.2 682.3,933.2Z"/></defs></svg>
+<header class="bar">
+  <div class="bar-in gut">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="324.5 122.5 600 600" role="img" aria-label="Olivir Semi Jóias">
+        <circle cx="624.5" cy="422.5" r="300" fill="var(--gold)"/>
+        <circle cx="624.5" cy="422.5" r="280" fill="none" stroke="var(--cream)" stroke-width="5"/>
+        <use href="#lg-neck" fill="var(--cream)" stroke="var(--cream)" stroke-width="9" stroke-linejoin="round"/>
+      </svg>
+      <div class="brand-lock" aria-hidden="true">
+        <svg class="brand-word" viewBox="270 690 790 170"><use href="#lg-word"/></svg>
+        <span class="brand-sub">Semi jóias</span>
+      </div>
+      <h1 class="brand-tag">Catálogo</h1>
+    </div>
+  </div>
+</header>
+<main class="gut">
+  <section class="controls" id="controls" aria-label="Buscar" hidden>
+    <div class="field"><label for="q">Buscar peça</label><input id="q" type="search" placeholder="Ex.: brincos" autocomplete="off"></div>
+  </section>
+  <div class="state" id="state" aria-live="polite"></div>
+  <ul class="grid" id="grid"></ul>
+</main>
+<dialog id="sheet" aria-labelledby="sheet-title"><div id="sheet-body"></div></dialog>
+<script>
+(function(){
+var CFG=window.OLIVIR_CONFIG||{},$=function(s){return document.querySelector(s)};
+var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var money=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};
+var grid=$('#grid'),stateEl=$('#state'),dlg=$('#sheet'),body=$('#sheet-body');
+var db=null,list=[],q='';
+if(CFG.firebase&&CFG.firebase.apiKey&&window.firebase){window.firebase.initializeApp(CFG.firebase);db=window.firebase.firestore()}
+var photo=function(p){return p.photoData||''};
+function waLink(p){
+  var n=String(CFG.whatsapp||'').replace(/\D/g,'');if(!n)return '';
+  var t='Olá, gostaria de saber mais sobre este produto: '+p.code+' - '+p.name;
+  t+='\n'+location.origin+location.pathname+'?p='+encodeURIComponent(p.id);
+  return 'https://wa.me/'+n+'?text='+encodeURIComponent(t);
+}
+function imgHTML(p,lazy){var s=photo(p);return s?'<img src="'+esc(s)+'" alt="'+esc(p.name)+'" loading="'+lazy+'" decoding="async">':'<span class="noimg">Sem foto</span>'}
+function render(){
+  var term=q.trim().toLowerCase();
+  var l=list.filter(function(p){return !term||p.name.toLowerCase().indexOf(term)>-1});
+  l.sort(function(a,b){return (a.sold-b.sold)||(b.createdAt-a.createdAt)});
+  $('#controls').hidden=!list.length;
+  if(!list.length){grid.innerHTML='';return}
+  stateEl.innerHTML=l.length?'':'<p>Nenhuma peça encontrada.</p>';
+  grid.innerHTML=l.map(function(p,i){
+    return '<li><button type="button" class="tile'+(p.sold?' is-sold':'')+'" data-id="'+esc(p.id)+'">'
+      +'<span class="t-photo">'+imgHTML(p,i<4?'eager':'lazy')+(p.sold?'<span class="selo">Vendida</span>':'')+'</span>'
+      +'<span class="t-name">'+esc(p.name)+'</span><span class="t-price">'+money(p.price)+'</span></button></li>';
+  }).join('');
+}
+function openSheet(id){
+  var p=list.find(function(x){return x.id===id});if(!p)return;
+  var w=waLink(p);
+  body.innerHTML='<div class="s-grid"><div class="s-photo">'+imgHTML(p,'eager')+'</div><div class="s-main">'
+    +'<div class="s-top"><span class="s-status'+(p.sold?'':' ok')+'">'+(p.sold?'Vendida':'Disponível')+'</span><button type="button" class="link" data-close>Fechar</button></div>'
+    +'<h2 id="sheet-title" class="s-name">'+esc(p.name)+'</h2><p class="s-price">'+money(p.price)+'</p>'
+    +(p.sold?'<p class="help">Esta peça já foi vendida.</p>':
+      '<div class="actions"><a class="btn btn-gold btn-wa" '+(w?'href="'+esc(w)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>Tenho interesse, chamar no WhatsApp</a></div>')
+    +'</div></div>';
+  if(!dlg.open)dlg.showModal();
+}
+grid.addEventListener('click',function(e){var t=e.target.closest('.tile');if(t)openSheet(t.dataset.id)});
+dlg.addEventListener('click',function(e){if(e.target===dlg||e.target.closest('[data-close]'))dlg.close()});
+$('#q').addEventListener('input',function(e){q=e.target.value;render()});
+function skeleton(){stateEl.innerHTML='';grid.innerHTML=Array(6).join('<li class="sk"><span class="sk-ph"></span><span class="sk-l"></span><span class="sk-l s"></span></li>')}
+function load(){
+  if(!db){stateEl.innerHTML='<div><h2>Em breve</h2><p>O catálogo ainda não foi configurado.</p></div>';return}
+  skeleton();
+  db.collection('pecas').get().then(function(sn){
+    list=sn.docs.map(function(d){var o=d.data();return {id:d.id,name:o.name||'',code:o.code||'',price:o.price,photoData:o.photoData||null,sold:!!o.sold,createdAt:Number(o.createdAt)||0}});
+    if(!list.length){grid.innerHTML='';stateEl.innerHTML='<div><h2>Catálogo vazio</h2><p>Volte em breve, novas peças chegando.</p></div>';return}
+    render();
+    var want=new URLSearchParams(location.search).get('p');if(want)openSheet(want);
+  }).catch(function(){grid.innerHTML='';stateEl.innerHTML='<div><h2>Sem conexão</h2><p>Não consegui carregar o catálogo.</p><button class="btn btn-gold" type="button" id="retry">Tentar de novo</button></div>';var b=$('#retry');if(b)b.onclick=load});
+}
+load();
+})();
+</script>
+</body>
+</html>

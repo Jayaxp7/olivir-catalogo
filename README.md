@@ -16,6 +16,20 @@ npx serve .
 2. Framework Preset: **Other**. Deixe build command e output directory em branco.
 3. Clique em Deploy.
 
-## Onde os dados ficam
+## Duas páginas
 
-Fora do Claude, as peças e as fotos ficam salvas no navegador do aparelho (localStorage), sem sincronizar entre aparelhos. O limite do navegador é de cerca de 5 MB, o que dá para dezenas de fotos reduzidas. Limpar os dados do site apaga o catálogo, então use "Exportar lista" quando disponível ou mantenha um backup.
+- `index.html`: área do vendedor (cadastro, vendas, comissão). Pede e-mail e senha.
+- `catalogo.html`: catálogo dos compradores. Só foto, nome e preço, com botão para o WhatsApp.
+
+## Configurar o Firebase (uma vez, plano Spark gratuito)
+
+1. Em https://console.firebase.google.com crie um projeto.
+2. **Authentication > Sign-in method**: ative E-mail/senha. Em **Users**, adicione o usuário do vendedor.
+3. **Firestore Database**: crie o banco (modo produção). Em **Regras**, cole o conteúdo de `firestore.rules` trocando `SEU_EMAIL_AQUI` pelo e-mail do vendedor, e publique.
+4. **Project settings > Seus apps > Web (`</>`)**: registre um app e copie `apiKey`, `authDomain`, `projectId` e `appId` para `config.js`, junto com o número do WhatsApp (só números, com 55 e DDD).
+5. **Authentication > Settings > Authorized domains**: adicione o domínio da Vercel (ex.: `olivir-catalogo.vercel.app`).
+6. Suba os arquivos no GitHub. A Vercel publica sozinha.
+
+As fotos ficam dentro do próprio Firestore (reduzidas no celular), então não precisa ativar o Storage nem trocar de plano.
+
+Sem o `config.js` preenchido, a área do vendedor funciona só neste navegador (localStorage).
