@@ -33,6 +33,9 @@
   --on-err:#ffffff;
   --shadow:rgba(47,38,27,.25);
   --r:8px;
+  --card:#f5eee2;
+  --neu:7px 7px 18px rgba(120,96,62,.13),-7px -7px 18px rgba(255,255,255,.95);
+  --neu-hover:9px 9px 22px rgba(120,96,62,.17),-9px -9px 22px #ffffff;
   --font-display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
   --font-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -42,12 +45,14 @@
     --bg:#1d1812;--surface:#27211a;--surface-2:#342c22;--ink:#f4ede1;--muted:#b3a48d;--line:#3a3227;
     --field-line:#7c6d58;--gold:#bca687;--on-gold:#231c13;--gold-text:#d3bf9f;--ok:#8fc59b;--err:#ff9a87;
     --on-err:#2a0d08;--shadow:rgba(0,0,0,.6);color-scheme:dark;
+    --card:#27211a;--neu:7px 7px 18px #15110c,-7px -7px 18px #2f271e;--neu-hover:9px 9px 22px #15110c,-9px -9px 22px #342c22;
   }
 }
 :root[data-theme="dark"]{
   --bg:#1d1812;--surface:#27211a;--surface-2:#342c22;--ink:#f4ede1;--muted:#b3a48d;--line:#3a3227;
   --field-line:#7c6d58;--gold:#bca687;--on-gold:#231c13;--gold-text:#d3bf9f;--ok:#8fc59b;--err:#ff9a87;
   --on-err:#2a0d08;--shadow:rgba(0,0,0,.6);color-scheme:dark;
+  --card:#27211a;--neu:7px 7px 18px #15110c,-7px -7px 18px #2f271e;--neu-hover:9px 9px 22px #15110c,-9px -9px 22px #342c22;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;min-height:100%}
@@ -89,7 +94,7 @@ main{max-width:1240px;margin:0 auto;padding-block:8px 40px}
 @media (max-width:560px){.totals .lbl{font-size:10px;letter-spacing:.04em}.totals .num{font-size:clamp(11px,3.5vw,16px);letter-spacing:-.02em;white-space:nowrap}}
 .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .num{font-family:var(--font-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.controls{display:grid;gap:12px;padding-block:16px 24px}
+.controls{display:grid;gap:12px;padding-block:16px 24px;position:relative;z-index:1}
 @media(min-width:720px){.controls{grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:20px}}
 .field{display:grid;gap:6px;min-width:0}
 .field>label,legend{font-size:13px;font-weight:600}
@@ -105,19 +110,21 @@ input[aria-invalid=true],textarea[aria-invalid=true]{border-color:var(--err)}
 .chip .n{font-family:var(--font-mono);font-size:12px;opacity:.75;margin-left:6px}
 
 /* Grid */
-.grid{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 14px}
+.grid{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 16px;padding-bottom:24px}
 @media(min-width:720px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 20px}}
 @media(min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(min-width:1280px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
-.tile{display:grid;gap:5px;width:100%;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer;align-content:start;border-radius:var(--r)}
-.t-photo{display:block;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;background:var(--surface-2);margin-bottom:4px}
+.tile{display:grid;gap:5px;width:100%;min-width:0;text-align:left;background:var(--card);border:0;padding:12px;cursor:pointer;align-content:start;border-radius:31px;box-shadow:var(--neu);height:100%;transition:box-shadow .3s ease,transform .12s ease}
+.grid>li{display:flex}
+@media(hover:hover){.tile:hover{box-shadow:var(--neu-hover)}}
+.t-photo{display:block;aspect-ratio:4/5;border-radius:19px;overflow:hidden;background:var(--surface-2);margin-bottom:4px}
 .t-photo img,.s-photo img,.pf-frame img{display:block;width:100%;height:100%;object-fit:cover}
 .t-photo img{transition:transform .5s cubic-bezier(.16,1,.3,1),filter .3s ease,opacity .3s ease}
 .tile:hover .t-photo img{transform:scale(1.03)}
 .tile:active{transform:scale(.985)}
 .tile.is-sold .t-photo img{filter:grayscale(.9);opacity:.55}
 .noimg{display:grid;place-items:center;width:100%;height:100%;color:var(--muted);font-size:13px;text-align:center;padding:8px}
-.t-name{font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.t-name{min-height:2.6em;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .t-meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .t-code{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
 .t-price{font-family:var(--font-mono);font-size:14.5px;font-weight:500;font-variant-numeric:tabular-nums}
@@ -185,6 +192,22 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .login{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:24px}
 .login form{display:grid;gap:16px;width:min(380px,100%)}
 .login h2{font-family:var(--font-display);font-weight:600;font-size:34px;line-height:1.05}
+/* Review */
+#review .rv{display:grid;gap:14px;padding:20px max(16px,env(safe-area-inset-right,0px)) max(22px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#review h2{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.05}
+.rv-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.rv-row{display:grid;grid-template-columns:auto 56px minmax(0,1fr);gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);cursor:pointer;min-height:64px}
+.rv-row.keep{border-color:var(--gold-text)}
+.rv-row input{width:22px;height:22px;accent-color:var(--gold-text);margin:0}
+.rv-th{width:56px;height:56px;border-radius:var(--r);overflow:hidden;background:var(--surface-2)}
+.rv-th img{display:block;width:100%;height:100%;object-fit:cover}
+.rv-n{font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.rv-m{font-size:12.5px;color:var(--muted)}
+.rv-tag{font-size:12px;font-weight:600;color:var(--gold-text);text-transform:uppercase;letter-spacing:.06em}
+.rv-sum{font-size:14px;font-weight:600}
+.rv-act{display:grid;gap:10px}
+.rv-tools{display:flex;flex-wrap:wrap;gap:4px 16px}
+@media(min-width:720px){#review{width:min(640px,calc(100% - 32px))}}
 /* Toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:var(--r);font-weight:500;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:30}
 </style>
@@ -238,9 +261,11 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 
 <div class="foot gut" id="foot" hidden>
   <button type="button" class="link" data-act="export">Exportar lista para planilha</button>
+  <button type="button" class="link" data-act="review">Revisar peças antigas</button>
 </div>
 
 <dialog id="sheet" aria-labelledby="sheet-title"><div class="s-in" id="sheet-body"></div></dialog>
+<dialog id="review" aria-labelledby="rv-title"><div class="s-in" id="rv-body"></div></dialog>
 
 <script>
 (function(){
@@ -365,9 +390,9 @@ function askLogin(auth){
     });
   });
 }
-function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:Number(o.createdAt),sold:!!o.sold,sale:null}}
+function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:o.createdAt,reviewedAt:o.reviewedAt||null,sold:!!o.sold,sale:null}}
 async function fbSave(p){
-  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,createdAt:p.createdAt||Date.now()});
+  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,createdAt:p.createdAt||new Date().toISOString(),reviewedAt:p.reviewedAt||null});
   var v=store.fb.collection('vendas').doc(p.id);
   if(p.sold&&p.sale)await v.set(clone(p.sale));else await v.delete();
 }
@@ -393,6 +418,8 @@ async function initFb(){
   await fbMigrate();
   return true;
 }
+var localList=[];
+function persistLocal(){localStorage.setItem(LS_KEY,JSON.stringify(localList))}
 async function initStore(){
   try{if(await initFb())return}catch(e){}
   try{
@@ -749,6 +776,7 @@ document.addEventListener('click',function(e){
   else if(a==='filter'){S.filter=t.dataset.v;render()}
   else if(a==='clear'){S.filter='all';S.q='';$('#q').value='';render()}
   else if(a==='export')exportCsv();
+  else if(a==='review')openReview(true);
 });
 document.addEventListener('submit',function(e){
   e.preventDefault();
@@ -761,6 +789,111 @@ document.addEventListener('change',function(e){
   else if(t.name==='method'){$('#sf-inst-row').hidden=t.value!=='parcelado';setErr('sf-method','')}
 });
 $('#q').addEventListener('input',function(e){S.q=e.target.value;render()});
+
+
+/* ---------- Revisão de peças antigas (a cada 3 meses) ---------- */
+/* Entram: peças NÃO vendidas e com mais de 90 dias desde o cadastro (ou desde a última revisão em que foram mantidas).
+   Peças novas e peças vendidas nunca entram. Nada é apagado sem confirmação do vendedor. */
+var RV_DAY=864e5,RV_AGE=90*RV_DAY,RV_SNOOZE='ouro-offir:review-snooze',rvShown=false;
+var R={keep:{},step:'pick',busy:false,err:'',list:[]};
+var rvDlg=$('#review'),rvBody=$('#rv-body');
+function tms(v){if(typeof v==='number')return v;var n=Date.parse(v);return isNaN(n)?0:n}
+function rvBase(p){return Math.max(tms(p.createdAt),tms(p.reviewedAt))}
+function staleList(){var now=Date.now();return S.pieces.filter(function(p){var b=rvBase(p);return !p.sold&&b>0&&now-b>RV_AGE}).sort(function(a,b){return rvBase(a)-rvBase(b)})}
+function monthsAgo(p){var m=Math.floor((Date.now()-rvBase(p))/(30*RV_DAY));return m<=1?'há 3 meses':'há '+m+' meses'}
+function rvSnoozeGet(){try{return Number(localStorage.getItem(RV_SNOOZE))||0}catch(e){return 0}}
+function rvSnoozeSet(){try{localStorage.setItem(RV_SNOOZE,String(Date.now()+3*RV_DAY))}catch(e){}}
+function maybeReview(){
+  if(rvShown||store.mode==='offline'||!S.loaded||rvDlg.open||dlg.open)return;
+  if(Date.now()<rvSnoozeGet())return;
+  if(!staleList().length)return;
+  rvShown=true;openReview(false);
+}
+function openReview(manual){
+  if(store.mode==='offline'){toast('Sem conexão. Volte a ficar online para revisar.');return}
+  var l=staleList();
+  if(!l.length){if(manual)toast('Nenhuma peça com mais de 3 meses em estoque.');return}
+  R={keep:{},step:'pick',busy:false,err:'',list:l};
+  renderReview();
+  if(!rvDlg.open)rvDlg.showModal();
+}
+function rvCounts(){var k=0;R.list.forEach(function(p){if(R.keep[p.id])k++});return {keep:k,del:R.list.length-k}}
+function rvLabel(c){return c.del?'Continuar':'Manter todas'}
+function rvSumText(c){return 'Manter '+c.keep+' · Apagar '+c.del}
+function renderReview(){
+  var n=R.list.length,c=rvCounts();
+  if(R.step==='pick'){
+    rvBody.innerHTML='<div class="rv"><h2 id="rv-title">Revisão de peças antigas</h2>'
+      +'<p class="help">'+(n===1?'Esta peça está':'Estas '+n+' peças estão')+' há mais de 3 meses no catálogo sem venda. Se já voltaram para a fábrica, deixe sem marcar para apagar. <b>Marque as que você quer manter.</b> Peças vendidas e peças novas não entram aqui.</p>'
+      +'<div class="rv-tools"><button type="button" class="link" data-rv="all">Manter todas</button><button type="button" class="link" data-rv="none">Desmarcar todas</button><button type="button" class="link" data-rv="csv">Baixar lista antes</button></div>'
+      +'<ul class="rv-list">'+R.list.map(function(p){
+        var src=srcOf(p);
+        return '<li><label class="rv-row'+(R.keep[p.id]?' keep':'')+'"><input type="checkbox" data-keep="'+esc(p.id)+'"'+(R.keep[p.id]?' checked':'')+' aria-label="Manter '+esc(p.name)+'">'
+          +'<span class="rv-th">'+(src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async">':'')+'</span>'
+          +'<span><span class="rv-n">'+esc(p.name)+'</span><br><span class="rv-m">'+esc(p.code)+' · '+monthsAgo(p)+'</span></span></label></li>';
+      }).join('')+'</ul>'
+      +'<p class="rv-sum" id="rv-sum" aria-live="polite">'+rvSumText(c)+'</p>'
+      +'<p class="err" id="rv-err" role="alert">'+esc(R.err)+'</p>'
+      +'<div class="rv-act"><button type="button" class="btn btn-gold" id="rv-go" data-rv="go">'+rvLabel(c)+'</button><button type="button" class="btn btn-ghost" data-rv="later">Decidir depois</button></div></div>';
+  }else{
+    var del=R.list.filter(function(p){return !R.keep[p.id]});
+    rvBody.innerHTML='<div class="rv"><h2 id="rv-title">Apagar '+del.length+(del.length===1?' peça?':' peças?')+'</h2>'
+      +'<p class="help">As fotos e as informações '+(del.length===1?'dessa peça serão apagadas':'dessas peças serão apagadas')+' para sempre. '+(c.keep?c.keep+(c.keep===1?' peça será mantida.':' peças serão mantidas.'):'Nenhuma peça será mantida.')+'</p>'
+      +'<ul class="rv-list">'+del.map(function(p){return '<li class="rv-row" style="grid-template-columns:56px minmax(0,1fr);cursor:default"><span class="rv-th">'+(srcOf(p)?'<img src="'+esc(srcOf(p))+'" alt="" decoding="async">':'')+'</span><span><span class="rv-n">'+esc(p.name)+'</span><br><span class="rv-m">'+esc(p.code)+'</span></span></li>'}).join('')+'</ul>'
+      +'<p class="err" id="rv-err" role="alert">'+esc(R.err)+'</p>'
+      +'<div class="rv-act"><button type="button" class="btn btn-danger" id="rv-do" data-rv="do"'+(R.busy?' disabled':'')+'>'+(R.busy?'Apagando…':'Apagar '+del.length+(del.length===1?' peça':' peças'))+'</button><button type="button" class="btn btn-ghost" data-rv="back"'+(R.busy?' disabled':'')+'>Voltar</button></div></div>';
+  }
+}
+function rvUpdate(){
+  var c=rvCounts(),a=$('#rv-sum'),b=$('#rv-go');
+  if(a)a.textContent=rvSumText(c);if(b)b.textContent=rvLabel(c);
+}
+async function rvRun(){
+  if(R.busy)return;
+  R.busy=true;R.err='';renderReview();
+  var now=new Date().toISOString(),failed=false;
+  try{
+    for(var i=0;i<R.list.length;i++){
+      var p=R.list[i];
+      if(R.keep[p.id]){var nx=clone(p);nx.reviewedAt=now;await storeSave(nx);upsert(nx)}
+    }
+    for(var j=0;j<R.list.length;j++){
+      var d=R.list[j];if(R.keep[d.id])continue;
+      await storeRemove(d);
+      S.pieces=S.pieces.filter(function(x){return x.id!==d.id});
+      if(d.photoId)deleteAsset(d.photoId);
+    }
+  }catch(e){failed=true}
+  R.busy=false;
+  render();
+  if(failed){
+    R.list=staleList();R.list.forEach(function(p){});R.step='pick';R.keep={};
+    R.err='Não consegui concluir. Confira a conexão e tente de novo. Nada foi apagado além do que já saiu da lista.';
+    if(!R.list.length){rvDlg.close();return}
+    renderReview();return;
+  }
+  rvDlg.close();toast('Revisão concluída');
+}
+rvDlg.addEventListener('click',function(e){
+  if(e.target===rvDlg&&!R.busy){rvDlg.close();return}
+  var t=e.target.closest('[data-rv]');if(!t)return;
+  var a=t.dataset.rv;
+  if(R.busy)return;
+  if(a==='all'||a==='none'){R.list.forEach(function(p){R.keep[p.id]=a==='all'});renderReview()}
+  else if(a==='csv')exportCsv();
+  else if(a==='later')rvDlg.close();
+  else if(a==='go'){if(rvCounts().del){R.step='confirm';R.err='';renderReview();rvBody.scrollIntoView&&rvDlg.scrollTo(0,0)}else rvRun()}
+  else if(a==='back'){R.step='pick';R.err='';renderReview()}
+  else if(a==='do')rvRun();
+});
+rvDlg.addEventListener('change',function(e){
+  var t=e.target;if(!t.dataset||!t.dataset.keep)return;
+  R.keep[t.dataset.keep]=t.checked;
+  var row=t.closest('.rv-row');if(row)row.classList.toggle('keep',t.checked);
+  rvUpdate();
+});
+rvDlg.addEventListener('cancel',function(e){if(R.busy)e.preventDefault()});
+rvDlg.addEventListener('close',rvSnoozeSet);
 
 /* ---------- Boot ---------- */
 render();
@@ -781,7 +914,7 @@ Promise.all([cacheLoad(),initStore()]).then(function(){
   if(store.mode==='offline'){showOffline();return}
   subscribe(function(list,err){
     if(err){if(store.mode==='cloud')showOffline();else{S.loadErr=true;S.loaded=true;render()}return}
-    S.pieces=list;S.loadErr=false;S.loaded=true;render();
+    S.pieces=list;S.loadErr=false;S.loaded=true;render();maybeReview();
     if(store.mode==='cloud'){
       metaPut(list);
       var keep={};list.forEach(function(p){if(p.photoId)keep[p.photoId]=1});
