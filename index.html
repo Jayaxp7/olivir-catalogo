@@ -80,8 +80,9 @@ h1,h2,h3,p,ul,dl,dd{margin:0}
 /* Page */
 main{max-width:1240px;margin:0 auto;padding-block:8px 40px}
 .notice{margin:14px 0 0;padding:10px 12px;border:1px solid var(--field-line);border-radius:var(--r);font-size:14px;color:var(--ink);background:var(--surface)}
-.totals{display:flex;flex-wrap:wrap;gap:10px 40px;padding-block:22px 4px}
-.totals>div{display:grid;gap:2px}
+.totals{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:10px clamp(8px,2.6vw,40px);padding-block:22px 4px}
+.totals>div{display:grid;gap:2px;min-width:0}
+@media (max-width:560px){.totals .lbl{font-size:10px;letter-spacing:.04em}.totals .num{font-size:clamp(11px,3.5vw,16px);letter-spacing:-.02em;white-space:nowrap}}
 .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .num{font-family:var(--font-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .controls{display:grid;gap:12px;padding-block:16px 24px}
