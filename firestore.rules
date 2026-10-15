@@ -1,6 +1,6 @@
 rules_version = '2';
 // Cole em Firestore Database > Regras e publique.
-// Troque SEU_EMAIL_AQUI (2 lugares) pelo e-mail do vendedor.
+// Troque SEU_EMAIL_AQUI (3 lugares) pelo e-mail do vendedor.
 service cloud.firestore {
   match /databases/{database}/documents {
     // Compradores leem as pecas (nome, codigo, preco, foto, vendida). So o vendedor escreve.
@@ -11,6 +11,11 @@ service cloud.firestore {
     // Anotacoes de venda: somente o vendedor.
     match /vendas/{id} {
       allow read, write: if request.auth != null && request.auth.token.email == 'SEU_EMAIL_AQUI';
+    }
+    // Texto do "Sobre": todos leem, so o vendedor escreve.
+    match /config/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'SEU_EMAIL_AQUI';
     }
   }
 }

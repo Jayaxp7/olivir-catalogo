@@ -16,6 +16,10 @@ npx serve .
 2. Framework Preset: **Other**. Deixe build command e output directory em branco.
 3. Clique em Deploy.
 
+## App instalável
+
+No celular, abra o site do vendedor no Chrome, toque nos 3 pontos e em **Instalar app** (ou **Adicionar à tela inicial**). Depois de aberto uma vez com internet, o catálogo abre também sem sinal.
+
 ## Duas páginas
 
 - `index.html`: área do vendedor (cadastro, vendas, comissão). Pede e-mail e senha.

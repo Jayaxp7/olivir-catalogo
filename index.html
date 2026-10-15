@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#bca687">
 <meta name="description" content="Catálogo pessoal de semi jóias com controle de vendas.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Olivir">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Catálogo Olivir</title>
 <script src="config.js"></script>
@@ -222,6 +227,29 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .mn-item small{font-weight:400;font-size:13px;color:var(--muted)}
 .mn-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 .mn h2{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.05}
+/* Extras, galeria, pagamentos, avisos */
+.s-col{display:grid;gap:8px;align-content:start;min-width:0}
+.gal{display:flex;gap:8px}
+.gal button{width:56px;height:56px;padding:0;border:2px solid transparent;border-radius:var(--r);overflow:hidden;background:var(--surface-2);cursor:pointer}
+.gal button[aria-pressed=true]{border-color:var(--gold-text)}
+.gal img{display:block;width:100%;height:100%;object-fit:cover}
+.pf-extras{display:flex;flex-wrap:wrap;gap:8px}
+.pf-x{position:relative;width:64px;height:64px;border-radius:var(--r);overflow:hidden;background:var(--surface-2)}
+.pf-x img{display:block;width:100%;height:100%;object-fit:cover}
+.pf-x button{position:absolute;right:2px;top:2px;width:26px;height:26px;border:0;border-radius:50%;background:var(--ink);color:var(--bg);font-size:16px;line-height:1;cursor:pointer}
+.chk{display:flex;align-items:center;gap:10px;min-height:46px;font-weight:500;cursor:pointer}
+.chk input{width:22px;height:22px;accent-color:var(--gold-text);margin:0}
+.paynote,.bknote{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;margin:14px 0 0;padding:12px 14px;border:1px solid var(--field-line);border-radius:var(--r);background:var(--surface);text-align:left;color:var(--ink)}
+.paynote{cursor:pointer}
+.paynote b{font-family:var(--font-mono);font-weight:500}
+.paynote .sub{display:block;font-size:13px;color:var(--muted)}
+.paynote .sub.bad{color:var(--err);font-weight:600}
+.bknote{flex-wrap:wrap}
+.bknote p{font-size:14px;flex:1 1 220px}
+.bknote .acts{display:flex;gap:6px;align-items:center}
+.t-status.res{color:var(--gold-text);font-weight:600}
+.s-status.res{color:var(--gold-text)}
+.due-bad{color:var(--err);font-weight:600}
 /* Toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:var(--r);font-weight:500;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:30}
 </style>
@@ -251,6 +279,9 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 <main class="gut">
   <p class="notice" id="notice" hidden>Você está sem conexão com a sua conta. As peças e as fotos ficam salvas só neste navegador e não aparecem em outros aparelhos.</p>
 
+  <div class="bknote" id="bknote" hidden></div>
+  <button type="button" class="paynote" id="paynote" data-act="pay" hidden></button>
+
   <section class="totals" id="totals" aria-label="Resumo do catálogo" hidden>
     <div><span class="lbl">Peças</span><span class="num" id="t-count">0</span></div>
     <div><span class="lbl">Em estoque</span><span class="num" id="t-stock">R$ 0,00</span></div>
@@ -266,6 +297,7 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
     <div class="chips" role="group" aria-label="Mostrar">
       <button type="button" class="chip" data-act="filter" data-v="all" aria-pressed="true">Todas<span class="n" id="c-all">0</span></button>
       <button type="button" class="chip" data-act="filter" data-v="avail" aria-pressed="false">Disponíveis<span class="n" id="c-avail">0</span></button>
+      <button type="button" class="chip" data-act="filter" data-v="res" aria-pressed="false">Reservadas<span class="n" id="c-res">0</span></button>
       <button type="button" class="chip" data-act="filter" data-v="sold" aria-pressed="false">Vendidas<span class="n" id="c-sold">0</span></button>
     </div>
   </section>
@@ -282,6 +314,8 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 <dialog id="sheet" aria-labelledby="sheet-title"><div class="s-in" id="sheet-body"></div></dialog>
 <dialog id="review" aria-labelledby="rv-title"><div class="s-in" id="rv-body"></div></dialog>
 <dialog id="menu" aria-label="Menu"><div id="menu-body"></div></dialog>
+<dialog id="pay" aria-labelledby="pay-title"><div class="s-in" id="pay-body"></div></dialog>
+<input class="sr" id="bk-file" type="file" accept="application/json,.json" tabindex="-1">
 
 <script>
 (function(){
@@ -406,11 +440,13 @@ function askLogin(auth){
     });
   });
 }
-function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:o.createdAt,reviewedAt:o.reviewedAt||null,sold:!!o.sold,sale:null}}
+function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:o.createdAt,reviewedAt:o.reviewedAt||null,sold:!!o.sold,reserved:!!o.reserved&&!o.sold,reservedFor:'',photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],sale:null}}
 async function fbSave(p){
-  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,createdAt:p.createdAt||new Date().toISOString(),reviewedAt:p.reviewedAt||null});
+  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,reserved:!!p.reserved&&!p.sold,photoExtra:p.photoExtra||[],createdAt:p.createdAt||new Date().toISOString(),reviewedAt:p.reviewedAt||null});
   var v=store.fb.collection('vendas').doc(p.id);
-  if(p.sold&&p.sale)await v.set(clone(p.sale));else await v.delete();
+  if(p.sold&&p.sale)await v.set(clone(p.sale));
+  else if(p.reserved&&p.reservedFor)await v.set({reservedFor:p.reservedFor});
+  else await v.delete();
 }
 async function fbMigrate(){
   var list=[];try{var raw=localStorage.getItem(LS_KEY);list=raw?JSON.parse(raw):[]}catch(e){}
@@ -455,7 +491,7 @@ async function initStore(){
 function subscribe(cb){
   if(store.fb){
     var P=null,V=null,fail=function(e){cb(null,e)};
-    var emit=function(){if(!P||!V)return;cb(P.map(function(p){p.sale=V[p.id]||null;return p}))};
+    var emit=function(){if(!P||!V)return;cb(P.map(function(p){var v=V[p.id]||null;if(p.sold){p.sale=v}else{p.sale=null;p.reservedFor=(p.reserved&&v&&v.reservedFor)||''}return p}))};
     store.fb.collection('pecas').orderBy('createdAt').onSnapshot(function(sn){P=sn.docs.map(function(d){return fbDoc(d.id,d.data())});emit()},fail);
     store.fb.collection('vendas').onSnapshot(function(sn){V={};sn.docs.forEach(function(d){V[d.id]=d.data()});emit()},fail);
     return;
@@ -503,7 +539,7 @@ async function compress(file,plan){
 }
 
 /* ---------- State ---------- */
-var S={pieces:[],loaded:false,loadErr:false,filter:'all',q:'',openId:null,mode:null,confirm:null,busy:false,err:'',pending:null,removePhoto:false,photoBusy:false};
+var S={pieces:[],loaded:false,loadErr:false,filter:'all',q:'',openId:null,mode:null,confirm:null,busy:false,err:'',pending:null,removePhoto:false,photoBusy:false,extras:[]};
 var grid=$('#grid'),stateEl=$('#state'),dlg=$('#sheet'),sheet=$('#sheet-body');
 var cur=function(){return S.pieces.find(function(x){return x.id===S.openId})};
 var srcOf=function(p){return p.photoData||(p.photoId?(photoURL[p.photoId]||blobUrl(p.photoId)):'')};
@@ -524,29 +560,30 @@ function visible(){
   var q=norm(S.q.trim());
   return S.pieces.filter(function(p){
     if(S.filter==='sold'&&!p.sold)return false;
-    if(S.filter==='avail'&&p.sold)return false;
+    if(S.filter==='avail'&&(p.sold||p.reserved))return false;
+    if(S.filter==='res'&&!p.reserved)return false;
     return !q||norm(p.name).indexOf(q)>-1||norm(p.code).indexOf(q)>-1;
   }).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});
 }
 function tileHTML(p){
   var sold=!!p.sold,b=sold&&p.sale&&p.sale.buyer?p.sale.buyer:'';
-  var status=sold?('Vendida'+(b?' para '+esc(b):'')):'Disponível';
+  var res=!sold&&p.reserved,status=sold?('Vendida'+(b?' para '+esc(b):'')):res?('Reservada'+(p.reservedFor?' para '+esc(p.reservedFor):'')):'Disponível';
   var due=sold&&p.sale&&p.sale.dueDate?'<span class="t-due">Prazo '+fmtDate(p.sale.dueDate)+'</span>':'';
   return '<li><button type="button" class="tile'+(sold?' is-sold':'')+'" data-act="open" data-id="'+esc(p.id)+'">'
     +'<span class="t-photo">'+photoHTML(p,'','lazy')+'</span>'
     +'<span class="t-name">'+esc(p.name)+'</span>'
     +'<span class="t-meta"><span class="t-code">'+esc(p.code)+'</span><span class="t-price">'+money(p.price)+'</span></span>'
     +'<span class="t-comm">Comissão <span>'+money(commission(p.price))+'</span></span>'
-    +'<span class="t-status'+(sold?' ok':'')+'">'+status+'</span>'+due+'</button></li>';
+    +'<span class="t-status'+(sold?' ok':res?' res':'')+'">'+status+'</span>'+due+'</button></li>';
 }
 function render(){
   var total=S.pieces.length,show=S.loaded&&!S.loadErr&&total>0;
   $('#totals').hidden=!show;$('#controls').hidden=!show;$('#foot').hidden=!(show&&store.downloads);
   if(show){
-    var stock=0,sold=0,ns=0;
-    S.pieces.forEach(function(p){if(p.sold){sold+=p.price||0;ns++}else stock+=p.price||0});
+    var stock=0,sold=0,ns=0,nr=0;
+    S.pieces.forEach(function(p){if(p.sold){sold+=p.price||0;ns++}else{stock+=p.price||0;if(p.reserved)nr++}});
     $('#t-count').textContent=total;$('#t-stock').textContent=money(stock);$('#t-sold').textContent=money(sold);$('#t-comm').textContent=money(commission(sold));
-    $('#c-all').textContent=total;$('#c-avail').textContent=total-ns;$('#c-sold').textContent=ns;
+    $('#c-all').textContent=total;$('#c-avail').textContent=total-ns-nr;$('#c-res').textContent=nr;$('#c-sold').textContent=ns;
     document.querySelectorAll('.chip').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.v===S.filter))});
   }
   if(!S.loaded){
@@ -555,6 +592,7 @@ function render(){
     grid.innerHTML=sk;return;
   }
   grid.setAttribute('aria-busy','false');
+  updatePayNote();updateBackupNote();
   if(S.loadErr){
     grid.hidden=true;stateEl.hidden=false;
     stateEl.innerHTML='<h2>Não consegui carregar as peças</h2><p>Atualize a página para tentar de novo. Suas peças continuam salvas.</p>';return;
@@ -590,6 +628,8 @@ function saleSummary(s){
   if(s.soldAt)rows+='<dt>Data da venda</dt><dd>'+fmtDate(s.soldAt)+'</dd>';
   if(s.dueDate)rows+='<dt>Prazo de pagamento</dt><dd>'+fmtDate(s.dueDate)+'</dd>';
   if(s.method)rows+='<dt>Pagamento</dt><dd>'+esc(methodLabel(s))+'</dd>';
+  if(s.paid===true)rows+='<dt>Situação</dt><dd>Recebido'+(s.paidAt?' em '+fmtDate(s.paidAt):'')+'</dd>';
+  else if(s.paid===false){var di=dueInfo(s);rows+='<dt>Situação</dt><dd class="'+(di.bad?'due-bad':'')+'">A receber · '+esc(di.t)+'</dd>'}
   if(s.notes)rows+='<dt>Anotações</dt><dd>'+esc(s.notes)+'</dd>';
   return '<dl class="sale">'+rows+'</dl>';
 }
@@ -599,17 +639,29 @@ function actionsHTML(p){
   if(store.mode==='offline')return '<p class="help">Sem conexão. Para editar ou vender, volte a ficar online e atualize a página.</p>';
   if(S.confirm==='delete')return errP+'<div class="confirm" role="alert"><p>Excluir esta peça? A foto e as anotações também serão apagadas.</p><div class="actions"><button type="button" class="btn btn-danger" data-act="do-delete"'+d+'>Excluir peça</button><button type="button" class="btn btn-ghost" data-act="cancel-confirm">Manter</button></div></div>';
   if(S.confirm==='unsell')return errP+'<div class="confirm" role="alert"><p>Desfazer a venda? A peça volta para disponível e as anotações da venda são apagadas.</p><div class="actions"><button type="button" class="btn btn-danger" data-act="do-unsell"'+d+'>Desfazer venda</button><button type="button" class="btn btn-ghost" data-act="cancel-confirm">Manter</button></div></div>';
+  if(S.confirm==='reserve')return errP+'<div class="confirm"><div class="field"><label for="rs-name">Reservar para quem? (opcional)</label><input id="rs-name" type="text" autocomplete="off" data-autofocus></div><div class="actions"><button type="button" class="btn btn-gold" data-act="do-reserve"'+d+'>Reservar</button><button type="button" class="btn btn-ghost" data-act="cancel-confirm">Cancelar</button></div></div>';
+  if(p.sold&&p.sale&&p.sale.paid===false)return errP+'<div class="actions"><button type="button" class="btn btn-gold" data-act="mark-paid"'+d+'>Marcar como pago</button><button type="button" class="btn btn-ghost" data-act="edit-sale">Editar venda</button></div>'
+    +'<div class="actions"><button type="button" class="btn btn-ghost" data-act="edit">Editar peça</button><button type="button" class="link" data-act="ask-unsell">Desfazer venda</button><button type="button" class="link" data-act="ask-delete">Excluir peça</button></div>';
   if(p.sold)return errP+'<div class="actions"><button type="button" class="btn btn-gold" data-act="edit-sale">Editar venda</button><button type="button" class="btn btn-ghost" data-act="edit">Editar peça</button></div>'
     +'<div class="actions"><button type="button" class="link" data-act="ask-unsell">Desfazer venda</button><button type="button" class="link" data-act="ask-delete">Excluir peça</button></div>';
   return errP+'<div class="actions"><button type="button" class="btn btn-gold" data-act="sell">Marcar como vendida</button><button type="button" class="btn btn-ghost" data-act="edit">Editar peça</button></div>'
-    +'<div class="actions"><button type="button" class="link" data-act="ask-delete">Excluir peça</button></div>';
+    +'<div class="actions">'+(p.reserved?'<button type="button" class="link" data-act="do-unreserve"'+d+'>Tirar reserva</button>':'<button type="button" class="link" data-act="ask-reserve">Reservar peça</button>')+'<button type="button" class="link" data-act="ask-delete">Excluir peça</button></div>';
+}
+function galHTML(p){
+  var ex=p.photoExtra||[];if(!ex.length)return '';
+  var all=[srcOf(p)].concat(ex).filter(Boolean);if(all.length<2)return '';
+  return '<div class="gal">'+all.map(function(u,i){return '<button type="button" data-act="gal" data-i="'+i+'" aria-pressed="'+(i===0)+'" aria-label="Foto '+(i+1)+'"><img src="'+esc(u)+'" alt=""></button>'}).join('')+'</div>';
 }
 function detailHTML(p){
-  var sold=!!p.sold;
-  return '<div class="s-grid"><div class="s-photo">'+photoHTML(p,'Foto de '+p.name,'eager')+'</div><div class="s-main">'
-    +'<div class="s-top"><span class="s-status'+(sold?' ok':'')+'">'+(sold?'Vendida':'Disponível')+'</span><button type="button" class="link" data-act="close">Fechar</button></div>'
+  var sold=!!p.sold,res=!sold&&p.reserved;
+  return '<div class="s-grid"><div class="s-col"><div class="s-photo" id="s-photo">'+photoHTML(p,'Foto de '+p.name,'eager')+'</div>'+galHTML(p)+'</div><div class="s-main">'
+    +'<div class="s-top"><span class="s-status'+(sold?' ok':res?' res':'')+'">'+(sold?'Vendida':res?'Reservada':'Disponível')+'</span><button type="button" class="link" data-act="close">Fechar</button></div>'
     +'<h2 id="sheet-title" class="s-name">'+esc(p.name)+'</h2><p class="s-code">'+esc(p.code)+'</p><p class="s-price">'+money(p.price)+'</p><p class="s-comm">Comissão <span>'+money(commission(p.price))+'</span></p>'
-    +(sold?saleSummary(p.sale):'')+actionsHTML(p)+'</div></div>';
+    +(res&&p.reservedFor?'<p class="help">Reservada para '+esc(p.reservedFor)+'</p>':'')+(sold?saleSummary(p.sale):'')+actionsHTML(p)+'</div></div>';
+}
+function extrasHTML(){
+  return (S.extras.length?'<div class="pf-extras">'+S.extras.map(function(u,i){return '<span class="pf-x"><img src="'+esc(u)+'" alt="Foto extra '+(i+1)+'"><button type="button" data-act="rm-extra" data-i="'+i+'" aria-label="Remover foto extra '+(i+1)+'">×</button></span>'}).join('')+'</div>':'')
+    +(S.extras.length<2?'<input class="sr pf-pick" id="pf-extra" type="file" accept="image/*"><label class="btn btn-ghost" for="pf-extra">Adicionar foto extra</label><p class="help">Até 2 fotos extras, por exemplo a peça sendo usada.</p>':'');
 }
 function pieceFormHTML(p){
   var isNew=!p,img=p&&!S.removePhoto?photoHTML(p,'Foto atual','eager'):'<span class="noimg">Sem foto</span>';
@@ -619,7 +671,8 @@ function pieceFormHTML(p){
     +'<div class="pf-col"><div class="pf-frame" id="pf-frame">'+img+'</div>'
     +'<input class="sr pf-pick" id="pf-file" type="file" accept="image/*"><label class="btn btn-ghost" for="pf-file">Tirar ou escolher foto</label>'
     +'<p class="help" id="pf-status" aria-live="polite">A foto é reduzida antes de salvar.</p>'
-    +'<button type="button" class="link" data-act="remove-photo" id="pf-remove"'+(has?'':' hidden')+'>Remover foto</button></div>'
+    +'<button type="button" class="link" data-act="remove-photo" id="pf-remove"'+(has?'':' hidden')+'>Remover foto</button>'
+    +'<div id="pf-xbox">'+extrasHTML()+'</div></div>'
     +'<div class="form"><div class="s-top"><h2 id="sheet-title" class="s-name">'+(isNew?'Nova peça':'Editar peça')+'</h2><button type="button" class="link" data-act="cancel">Fechar</button></div>'
     +'<div class="field"><label for="pf-name">Nome da peça</label><input id="pf-name" type="text" autocomplete="off" value="'+esc(p?p.name:'')+'" placeholder="Ex.: Anel solitário" data-autofocus><p class="err" id="pf-name-err" hidden></p></div>'
     +'<div class="field"><label for="pf-code">Código</label><input id="pf-code" type="text" autocomplete="off" autocapitalize="characters" value="'+esc(p?p.code:'')+'" placeholder="Ex.: OO-0142"><p class="err" id="pf-code-err" hidden></p></div>'
@@ -637,6 +690,7 @@ function saleFormHTML(p){
     +'<div class="field"><label for="sf-due">Prazo de pagamento</label><input id="sf-due" type="date" value="'+esc(s.dueDate||'')+'"><p class="help">Data limite para receber. Pode deixar em branco.</p></div>'
     +'<fieldset><legend>Como será o pagamento</legend><div class="seg">'+radio('pix')+radio('avista')+radio('parcelado')+'</div><p class="err" id="sf-method-err" hidden></p></fieldset>'
     +'<div class="field" id="sf-inst-row"'+(m==='parcelado'?'':' hidden')+'><label for="sf-inst">Número de parcelas</label><input id="sf-inst" type="number" min="2" max="48" inputmode="numeric" value="'+esc(s.installments||2)+'"><p class="err" id="sf-inst-err" hidden></p></div>'
+    +'<label class="chk"><input type="checkbox" id="sf-paid"'+((editing?s.paid!==false:false)?' checked':'')+'> Pagamento já recebido</label>'
     +'<div class="field"><label for="sf-notes">Anotações</label><textarea id="sf-notes" rows="4">'+esc(s.notes||'')+'</textarea><p class="help">Entrada, datas das parcelas, telefone, combinados.</p></div>'
     +'<p class="err" id="form-err" role="alert" hidden></p>'
     +'<div class="actions"><button type="submit" class="btn btn-gold" id="sf-save">'+(editing?'Salvar venda':'Confirmar venda')+'</button><button type="button" class="btn btn-ghost" data-act="cancel">Cancelar</button></div></div></form>';
@@ -652,6 +706,7 @@ function renderSheet(){
 }
 function openSheet(mode,id){
   S.openId=id||null;S.mode=mode;S.confirm=null;S.err='';S.busy=false;S.removePhoto=false;
+  if(mode==='new')S.extras=[];else if(mode==='edit'){var pp=cur();S.extras=pp&&pp.photoExtra?pp.photoExtra.slice():[]}
   if(mode==='new'||mode==='edit'){if(S.pending){URL.revokeObjectURL(S.pending.url);S.pending=null}}
   renderSheet();
   if(!dlg.open){dlg.showModal();document.body.classList.add('lock')}
@@ -690,6 +745,17 @@ async function onFile(inp){
   finally{S.photoBusy=false;inp.value=''}
 }
 
+async function onExtra(inp){
+  var f=inp.files&&inp.files[0];if(!f)return;
+  S.photoBusy=true;
+  try{
+    var blob=await compress(f,{max:700,q:.7});
+    S.extras.push(await toDataURL(blob));
+    var bx=$('#pf-xbox');if(bx)bx.innerHTML=extrasHTML();
+  }catch(e){var st=$('#pf-status');if(st)st.textContent='Não consegui ler essa foto extra. Tente outra imagem em JPG ou PNG.'}
+  finally{S.photoBusy=false;inp.value=''}
+}
+
 async function submitPiece(){
   if(S.busy)return;
   if(S.photoBusy){formErr('Aguarde a foto terminar de carregar.');return}
@@ -707,7 +773,7 @@ async function submitPiece(){
     var oldPhoto=next.photoId;
     if(S.pending){var up=await uploadPhoto(S.pending.blob);next.photoId=up.photoId;next.photoData=up.photoData;if(up.photoId)await cachePut(up.photoId,S.pending.blob)}
     else if(S.removePhoto){next.photoId=null;next.photoData=null}
-    next.name=name;next.code=code;next.price=price;
+    next.name=name;next.code=code;next.price=price;next.photoExtra=S.extras.slice();
     await storeSave(next);
     if(oldPhoto&&oldPhoto!==next.photoId)deleteAsset(oldPhoto);
     upsert(next);
@@ -731,8 +797,9 @@ async function submitSale(f){
   formErr('');var idle=p.sold?'Salvar venda':'Confirmar venda';setBusy('sf-save',true,'Salvando…',idle);
   try{
     var next=clone(p);
-    next.sold=true;
-    next.sale={buyer:buyer,dueDate:due||null,method:method,installments:method==='parcelado'?inst:null,notes:notes,soldAt:(p.sale&&p.sale.soldAt)||new Date().toISOString()};
+    next.sold=true;next.reserved=false;next.reservedFor='';
+    var paid=$('#sf-paid').checked;
+    next.sale={buyer:buyer,dueDate:due||null,method:method,installments:method==='parcelado'?inst:null,notes:notes,soldAt:(p.sale&&p.sale.soldAt)||new Date().toISOString(),paid:paid,paidAt:paid?((p.sale&&p.sale.paidAt)||new Date().toISOString()):null};
     await storeSave(next);upsert(next);backToDetail();toast(p.sold?'Venda atualizada':'Peça marcada como vendida');
   }catch(e){formErr('Não consegui salvar. Confira a conexão e tente de novo.')}
   finally{S.busy=false;var b=$('#sf-save');if(b){b.disabled=false;b.textContent=idle}}
@@ -741,7 +808,7 @@ async function submitSale(f){
 async function doUnsell(){
   var p=cur();if(!p||S.busy)return;
   S.busy=true;renderSheet();
-  try{var next=clone(p);next.sold=false;next.sale=null;await storeSave(next);upsert(next);S.busy=false;backToDetail();toast('Venda desfeita')}
+  try{var next=clone(p);next.sold=false;next.sale=null;next.reserved=false;next.reservedFor='';await storeSave(next);upsert(next);S.busy=false;backToDetail();toast('Venda desfeita')}
   catch(e){S.busy=false;S.err='Não consegui desfazer a venda. Tente de novo.';renderSheet()}
 }
 async function doDelete(){
@@ -768,6 +835,121 @@ async function exportCsv(){
   catch(e){if(!(e&&e.code==='declined'))toast('Não consegui exportar agora. Tente de novo.')}
 }
 
+
+/* ---------- Reservar, receber, backup ---------- */
+async function doReserve(on){
+  var p=cur();if(!p||S.busy)return;
+  var name=on?($('#rs-name')?$('#rs-name').value.trim():''):'';
+  S.busy=true;renderSheet();
+  try{
+    var nx=clone(p);nx.reserved=on;nx.reservedFor=on?name:'';
+    await storeSave(nx);upsert(nx);S.busy=false;backToDetail();toast(on?'Peça reservada':'Reserva removida');
+  }catch(e){S.busy=false;S.err='Não consegui salvar. Confira a conexão e tente de novo.';renderSheet()}
+}
+function todayMs(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()}
+function dueInfo(s){
+  if(!s||!s.dueDate)return {k:'none',t:'sem prazo',bad:false,days:null};
+  var m=String(s.dueDate).split('-'),d=new Date(Number(m[0]),Number(m[1])-1,Number(m[2])).getTime();
+  var n=Math.round((d-todayMs())/864e5);
+  if(n<0)return {k:'late',t:'atrasado há '+(-n)+(n===-1?' dia':' dias'),bad:true,days:n};
+  if(n===0)return {k:'today',t:'vence hoje',bad:false,days:0};
+  return {k:'soon',t:'vence em '+n+(n===1?' dia':' dias'),bad:false,days:n};
+}
+function pendingList(){
+  return S.pieces.filter(function(p){return p.sold&&p.sale&&p.sale.paid===false}).sort(function(a,b){
+    var x=dueInfo(a.sale),y=dueInfo(b.sale);
+    var kx=x.days==null?1e9:x.days,ky=y.days==null?1e9:y.days;return kx-ky;
+  });
+}
+function updatePayNote(){
+  var el=$('#paynote'),l=pendingList();
+  if(!S.loaded||S.loadErr||!l.length){el.hidden=true;return}
+  var sum=0,late=0,today=0;
+  l.forEach(function(p){sum+=p.price||0;var i=dueInfo(p.sale);if(i.k==='late')late++;else if(i.k==='today')today++});
+  var sub=[];if(late)sub.push(late+(late===1?' atrasado':' atrasados'));if(today)sub.push(today+(today===1?' vence hoje':' vencem hoje'));
+  el.innerHTML='<span><span class="lbl">A receber</span><span class="sub'+(late?' bad':'')+'">'+(sub.length?sub.join(' · '):l.length+(l.length===1?' pagamento pendente':' pagamentos pendentes'))+'</span></span><b>'+money(sum)+'</b>';
+  el.hidden=false;
+}
+var payDlg=$('#pay'),payBody=$('#pay-body');
+function renderPay(){
+  var l=pendingList();
+  if(!l.length){if(payDlg.open)payDlg.close();return}
+  var sum=0;l.forEach(function(p){sum+=p.price||0});
+  payBody.innerHTML='<div class="rv"><h2 id="pay-title">A receber</h2><p class="help">Total pendente: <b>'+money(sum)+'</b>. Toque em Recebido quando o pagamento cair.</p><ul class="rv-list">'
+    +l.map(function(p){
+      var i=dueInfo(p.sale),src=srcOf(p);
+      return '<li><div class="rv-row" style="grid-template-columns:56px minmax(0,1fr) auto;cursor:default"><span class="rv-th">'+(src?'<img src="'+esc(src)+'" alt="" decoding="async">':'')+'</span>'
+        +'<span><span class="rv-n">'+esc((p.sale&&p.sale.buyer)||'Sem nome')+'</span><br><span class="rv-m">'+esc(p.name)+' · '+esc(p.code)+'</span><br><span class="rv-m'+(i.bad?' due-bad':'')+'">'+money(p.price)+' · '+esc(i.t)+'</span></span>'
+        +'<button type="button" class="btn btn-gold" style="min-height:40px;padding:0 12px" data-pay="'+esc(p.id)+'">Recebido</button></div></li>';
+    }).join('')+'</ul><div class="rv-act"><button type="button" class="btn btn-ghost" data-pay="close">Fechar</button></div></div>';
+}
+async function markPaid(p){
+  if(!p||S.busy)return;
+  S.busy=true;
+  try{
+    var nx=clone(p);nx.sale.paid=true;nx.sale.paidAt=new Date().toISOString();
+    await storeSave(nx);upsert(nx);S.busy=false;toast('Pagamento registrado');
+    if(dlg.open&&S.openId===p.id)renderSheet();
+    if(payDlg.open)renderPay();
+  }catch(e){S.busy=false;toast('Não consegui salvar. Tente de novo.')}
+}
+payDlg.addEventListener('click',function(e){
+  if(e.target===payDlg){payDlg.close();return}
+  var t=e.target.closest('[data-pay]');if(!t)return;
+  if(t.dataset.pay==='close')payDlg.close();
+  else markPaid(S.pieces.find(function(x){return x.id===t.dataset.pay}));
+});
+function openPay(){
+  if(store.mode==='offline'){toast('Sem conexão. Volte a ficar online para registrar pagamentos.');return}
+  if(!pendingList().length)return;renderPay();if(!payDlg.open)payDlg.showModal();
+}
+
+/* Backup */
+var BK_LAST='ouro-offir:last-backup',BK_BASE='ouro-offir:backup-base',BK_SNZ='ouro-offir:backup-snooze',BK_DAYS=30;
+function lsGet(k){try{return Number(localStorage.getItem(k))||0}catch(e){return 0}}
+function lsSet(k,v){try{localStorage.setItem(k,String(v))}catch(e){}}
+function updateBackupNote(){
+  var el=$('#bknote');
+  if(!S.loaded||S.loadErr||!S.pieces.length||store.mode==='offline'){el.hidden=true;return}
+  if(!lsGet(BK_BASE))lsSet(BK_BASE,Date.now());
+  var last=lsGet(BK_LAST)||lsGet(BK_BASE),days=Math.floor((Date.now()-last)/864e5);
+  if(days<BK_DAYS||Date.now()<lsGet(BK_SNZ)){el.hidden=true;return}
+  el.innerHTML='<p>'+(lsGet(BK_LAST)?'Faz '+days+' dias que você não baixa um backup do catálogo.':'Você ainda não baixou um backup do catálogo.')+' Ele guarda as peças, as fotos e as vendas.</p><div class="acts"><button type="button" class="btn btn-gold" data-act="backup">Baixar backup</button><button type="button" class="link" data-act="backup-later">Depois</button></div>';
+  el.hidden=false;
+}
+function downloadText(name,data,mime){
+  var a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type:mime}));
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);
+}
+function doBackup(){
+  var data=JSON.stringify({app:'olivir-catalogo',version:1,exportedAt:new Date().toISOString(),pieces:S.pieces.map(clone)});
+  downloadText('olivir-backup-'+new Date().toISOString().slice(0,10)+'.json',data,'application/json');
+  lsSet(BK_LAST,Date.now());updateBackupNote();toast('Backup baixado');
+}
+var restoreList=null;
+function onBackupFile(inp){
+  var f=inp.files&&inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var o=JSON.parse(r.result),l=o&&o.pieces;
+      if(!Array.isArray(l)||!l.length||!l.every(function(p){return p&&p.id&&p.name&&p.code}))throw new Error('x');
+      restoreList=l;M.view='restore';M.err='';renderMenu();if(!menuDlg.open)menuDlg.showModal();
+    }catch(e){restoreList=null;M.view='menu';renderMenu();if(!menuDlg.open)menuDlg.showModal();toast('Esse arquivo não parece um backup do catálogo.')}
+    inp.value='';
+  };
+  r.onerror=function(){toast('Não consegui ler o arquivo.');inp.value=''};
+  r.readAsText(f);
+}
+async function runRestore(){
+  if(!restoreList||M.busy)return;
+  M.busy=true;M.err='';renderMenu();
+  try{
+    for(var i=0;i<restoreList.length;i++){var p=restoreList[i];await storeSave(p);upsert(p)}
+    M.busy=false;restoreList=null;menuDlg.close();toast('Backup restaurado');
+  }catch(e){M.busy=false;M.err='Não consegui restaurar tudo. Confira a conexão e tente de novo.';renderMenu()}
+}
+
 /* ---------- Events ---------- */
 document.addEventListener('click',function(e){
   if(e.target===dlg){closeSheet();return}
@@ -782,6 +964,12 @@ document.addEventListener('click',function(e){
   else if(a==='sell'||a==='edit-sale'){S.mode='sale';S.err='';renderSheet()}
   else if(a==='ask-delete'){S.confirm='delete';S.err='';renderSheet()}
   else if(a==='ask-unsell'){S.confirm='unsell';S.err='';renderSheet()}
+  else if(a==='ask-reserve'){S.confirm='reserve';S.err='';renderSheet()}
+  else if(a==='do-reserve')doReserve(true);
+  else if(a==='do-unreserve')doReserve(false);
+  else if(a==='mark-paid')markPaid(cur());
+  else if(a==='gal'){var pp=cur();if(pp){var all=[srcOf(pp)].concat(pp.photoExtra||[]).filter(Boolean),ph=$('#s-photo');if(ph&&all[t.dataset.i]){ph.innerHTML='<img src="'+esc(all[t.dataset.i])+'" alt="Foto de '+esc(pp.name)+'">';document.querySelectorAll('.gal button').forEach(function(b){b.setAttribute('aria-pressed',String(b===t))})}}}
+  else if(a==='rm-extra'){S.extras.splice(Number(t.dataset.i),1);var bx=$('#pf-xbox');if(bx)bx.innerHTML=extrasHTML()}
   else if(a==='cancel-confirm'){S.confirm=null;S.err='';renderSheet()}
   else if(a==='do-delete')doDelete();
   else if(a==='do-unsell')doUnsell();
@@ -794,6 +982,9 @@ document.addEventListener('click',function(e){
   else if(a==='export')exportCsv();
   else if(a==='review')openReview(true);
   else if(a==='menu')openMenu();
+  else if(a==='pay')openPay();
+  else if(a==='backup')doBackup();
+  else if(a==='backup-later'){lsSet(BK_SNZ,Date.now()+7*864e5);updateBackupNote()}
 });
 document.addEventListener('submit',function(e){
   e.preventDefault();
@@ -803,6 +994,8 @@ document.addEventListener('submit',function(e){
 document.addEventListener('change',function(e){
   var t=e.target;
   if(t.id==='pf-file')onFile(t);
+  else if(t.id==='pf-extra')onExtra(t);
+  else if(t.id==='bk-file')onBackupFile(t);
   else if(t.name==='method'){$('#sf-inst-row').hidden=t.value!=='parcelado';setErr('sf-method','')}
 });
 $('#q').addEventListener('input',function(e){S.q=e.target.value;render()});
@@ -816,7 +1009,7 @@ var R={keep:{},step:'pick',busy:false,err:'',list:[]};
 var rvDlg=$('#review'),rvBody=$('#rv-body');
 function tms(v){if(typeof v==='number')return v;var n=Date.parse(v);return isNaN(n)?0:n}
 function rvBase(p){return Math.max(tms(p.createdAt),tms(p.reviewedAt))}
-function staleList(){var now=Date.now();return S.pieces.filter(function(p){var b=rvBase(p);return !p.sold&&b>0&&now-b>RV_AGE}).sort(function(a,b){return rvBase(a)-rvBase(b)})}
+function staleList(){var now=Date.now();return S.pieces.filter(function(p){var b=rvBase(p);return !p.sold&&!p.reserved&&b>0&&now-b>RV_AGE}).sort(function(a,b){return rvBase(a)-rvBase(b)})}
 function monthsAgo(p){var m=Math.floor((Date.now()-rvBase(p))/(30*RV_DAY));return m<=1?'há 3 meses':'há '+m+' meses'}
 function rvSnoozeGet(){try{return Number(localStorage.getItem(RV_SNOOZE))||0}catch(e){return 0}}
 function rvSnoozeSet(){try{localStorage.setItem(RV_SNOOZE,String(Date.now()+3*RV_DAY))}catch(e){}}
@@ -915,6 +1108,7 @@ rvDlg.addEventListener('close',rvSnoozeSet);
 
 /* ---------- Menu: Sobre e Contato ---------- */
 var ABOUT_KEY='ouro-offir:sobre',ABOUT={text:''},menuDlg=$('#menu'),menuBody=$('#menu-body'),M={view:'menu',err:'',busy:false};
+function shareHref(){return 'https://wa.me/?text='+encodeURIComponent('Conheça o catálogo da Olivir Semi Jóias: '+location.origin+'/catalogo.html')}
 function waHref(){var n=String((CFG&&CFG.whatsapp)||'').replace(/\D/g,'');return n?'https://wa.me/'+n:''}
 function aboutMirror(t){try{localStorage.setItem(ABOUT_KEY,t)}catch(e){}}
 function aboutInit(){
@@ -939,7 +1133,16 @@ function renderMenu(){
     var w=waHref();
     h+='<div class="mn-top"><span class="mn-title">Menu</span><button type="button" class="link" data-mn="close">Fechar</button></div>'
       +'<div class="mn-list"><button type="button" class="mn-item" data-mn="about">Sobre</button>'
-      +(w?'<a class="mn-item" href="'+esc(w)+'" target="_blank" rel="noopener">Contato <small>WhatsApp</small></a>':'')+'</div>';
+      +(w?'<a class="mn-item" href="'+esc(w)+'" target="_blank" rel="noopener">Contato <small>WhatsApp</small></a>':'')
+      +'<a class="mn-item" href="'+esc(shareHref())+'" target="_blank" rel="noopener">Compartilhar catálogo <small>WhatsApp</small></a>'
+      +'<button type="button" class="mn-item" data-mn="backup">Baixar backup <small>.json</small></button>'
+      +'<button type="button" class="mn-item" data-mn="restore">Restaurar backup</button></div>';
+  }else if(M.view==='restore'){
+    var n=restoreList?restoreList.length:0;
+    h+='<div class="mn-top"><span class="mn-title">Restaurar backup</span></div>'
+      +'<p class="help">O arquivo tem '+n+(n===1?' peça':' peças')+'. Peças com o mesmo código interno serão substituídas pelas do arquivo. As outras continuam como estão.</p>'
+      +'<p class="err" role="alert">'+esc(M.err)+'</p>'
+      +'<button type="button" class="btn btn-gold" data-mn="do-restore"'+(M.busy?' disabled':'')+'>'+(M.busy?'Restaurando…':'Restaurar agora')+'</button><button type="button" class="btn btn-ghost" data-mn="cancel-restore"'+(M.busy?' disabled':'')+'>Cancelar</button>';
   }else if(M.view==='about'){
     h+='<div class="mn-top"><button type="button" class="link" data-mn="back">Voltar</button><button type="button" class="link" data-mn="close">Fechar</button></div>'
       +'<h2>Sobre</h2>'
@@ -960,6 +1163,10 @@ menuDlg.addEventListener('click',async function(e){
   var a=t.dataset.mn;
   if(a==='close')menuDlg.close();
   else if(a==='back'){M.view='menu';renderMenu()}
+  else if(a==='backup'){doBackup()}
+  else if(a==='restore'){if(store.mode==='offline'){toast('Sem conexão. Volte a ficar online para restaurar.');return}$('#bk-file').click()}
+  else if(a==='do-restore')runRestore();
+  else if(a==='cancel-restore'){restoreList=null;M.view='menu';renderMenu()}
   else if(a==='about'){M.view='about';M.draft=null;M.err='';renderMenu()}
   else if(a==='edit'){
     if(store.mode==='offline'){toast('Sem conexão. Volte a ficar online para editar.');return}
@@ -999,6 +1206,7 @@ Promise.all([cacheLoad(),initStore()]).then(function(){
     }
   });
 });
+if('serviceWorker' in navigator&&location.protocol==='https:')window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
 })();
 </script>
 </body>

@@ -200,6 +200,11 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .btn-wa{width:100%;text-decoration:none}
 .btn-wa[aria-disabled=true]{opacity:.6;pointer-events:none}
 .count{font-size:13px;color:var(--muted)}
+.s-col{display:grid;gap:8px;align-content:start;min-width:0}
+.gal{display:flex;gap:8px}
+.gal button{width:56px;height:56px;padding:0;border:2px solid transparent;border-radius:var(--r);overflow:hidden;background:var(--surface-2);cursor:pointer}
+.gal button[aria-pressed=true]{border-color:var(--gold-text)}
+.gal img{display:block;width:100%;height:100%;object-fit:cover}
 /* Menu */
 .menu-btn{width:44px;height:44px;flex:none;display:grid;place-items:center;background:none;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);margin-left:-8px}
 .menu-btn:hover{background:var(--surface-2)}
@@ -264,36 +269,44 @@ function imgHTML(p,lazy){var s=photo(p);return s?'<img src="'+esc(s)+'" alt="'+e
 function render(){
   var term=q.trim().toLowerCase();
   var l=list.filter(function(p){return !term||p.name.toLowerCase().indexOf(term)>-1});
-  l.sort(function(a,b){return (a.sold-b.sold)||(b.createdAt-a.createdAt)});
+  var rank=function(p){return p.sold?2:p.reserved?1:0};
+  l.sort(function(a,b){return (rank(a)-rank(b))||(b.createdAt-a.createdAt)});
   $('#controls').hidden=!list.length;
   if(!list.length){grid.innerHTML='';return}
   stateEl.innerHTML=l.length?'':'<p>Nenhuma peça encontrada.</p>';
   grid.innerHTML=l.map(function(p,i){
-    return '<li><button type="button" class="tile'+(p.sold?' is-sold':'')+'" data-id="'+esc(p.id)+'">'
-      +'<span class="t-photo">'+imgHTML(p,i<4?'eager':'lazy')+(p.sold?'<span class="selo">Vendida</span>':'')+'</span>'
+    return '<li><button type="button" class="tile'+(p.sold||p.reserved?' is-sold':'')+'" data-id="'+esc(p.id)+'">'
+      +'<span class="t-photo">'+imgHTML(p,i<4?'eager':'lazy')+(p.sold?'<span class="selo">Vendida</span>':p.reserved?'<span class="selo">Reservada</span>':'')+'</span>'
       +'<span class="t-name">'+esc(p.name)+'</span><span class="t-price">'+money(p.price)+'</span></button></li>';
   }).join('');
 }
 function openSheet(id){
   var p=list.find(function(x){return x.id===id});if(!p)return;
   var w=waLink(p);
-  body.innerHTML='<div class="s-grid"><div class="s-photo">'+imgHTML(p,'eager')+'</div><div class="s-main">'
-    +'<div class="s-top"><span class="s-status'+(p.sold?'':' ok')+'">'+(p.sold?'Vendida':'Disponível')+'</span><button type="button" class="link" data-close>Fechar</button></div>'
+  var all=[photo(p)].concat(p.photoExtra||[]).filter(Boolean);
+  var gal=all.length>1?'<div class="gal">'+all.map(function(u,i){return '<button type="button" data-g="'+i+'" aria-pressed="'+(i===0)+'" aria-label="Foto '+(i+1)+'"><img src="'+esc(u)+'" alt=""></button>'}).join('')+'</div>':'';
+  var off=p.sold||p.reserved;
+  body.innerHTML='<div class="s-grid"><div class="s-col"><div class="s-photo" id="s-photo">'+imgHTML(p,'eager')+'</div>'+gal+'</div><div class="s-main">'
+    +'<div class="s-top"><span class="s-status'+(off?'':' ok')+'">'+(p.sold?'Vendida':p.reserved?'Reservada':'Disponível')+'</span><button type="button" class="link" data-close>Fechar</button></div>'
     +'<h2 id="sheet-title" class="s-name">'+esc(p.name)+'</h2><p class="s-price">'+money(p.price)+'</p>'
-    +(p.sold?'<p class="help">Esta peça já foi vendida.</p>':
+    +(p.sold?'<p class="help">Esta peça já foi vendida.</p>':p.reserved?'<p class="help">Esta peça está reservada para outra cliente. Fale com a gente para saber se ela volta a ficar disponível.</p>':
       '<div class="actions"><a class="btn btn-gold btn-wa" '+(w?'href="'+esc(w)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>Tenho interesse, chamar no WhatsApp</a></div>')
     +'</div></div>';
   if(!dlg.open)dlg.showModal();
 }
 grid.addEventListener('click',function(e){var t=e.target.closest('.tile');if(t)openSheet(t.dataset.id)});
-dlg.addEventListener('click',function(e){if(e.target===dlg||e.target.closest('[data-close]'))dlg.close()});
+dlg.addEventListener('click',function(e){
+  if(e.target===dlg||e.target.closest('[data-close]')){dlg.close();return}
+  var g=e.target.closest('[data-g]');
+  if(g){var im=g.querySelector('img'),ph=$('#s-photo');if(im&&ph){ph.innerHTML='<img src="'+esc(im.getAttribute('src'))+'" alt="">';dlg.querySelectorAll('.gal button').forEach(function(x){x.setAttribute('aria-pressed',String(x===g))})}}
+});
 $('#q').addEventListener('input',function(e){q=e.target.value;render()});
 function skeleton(){stateEl.innerHTML='';grid.innerHTML=Array(6).join('<li class="sk"><span class="sk-ph"></span><span class="sk-l"></span><span class="sk-l s"></span></li>')}
 function load(){
   if(!db){stateEl.innerHTML='<div><h2>Em breve</h2><p>O catálogo ainda não foi configurado.</p></div>';return}
   skeleton();
   db.collection('pecas').get().then(function(sn){
-    list=sn.docs.map(function(d){var o=d.data();return {id:d.id,name:o.name||'',code:o.code||'',price:o.price,photoData:o.photoData||null,sold:!!o.sold,createdAt:(typeof o.createdAt==='number'?o.createdAt:Date.parse(o.createdAt))||0}});
+    list=sn.docs.map(function(d){var o=d.data();return {id:d.id,name:o.name||'',code:o.code||'',price:o.price,photoData:o.photoData||null,photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],reserved:!!o.reserved&&!o.sold,sold:!!o.sold,createdAt:(typeof o.createdAt==='number'?o.createdAt:Date.parse(o.createdAt))||0}});
     if(!list.length){grid.innerHTML='';stateEl.innerHTML='<div><h2>Catálogo vazio</h2><p>Volte em breve, novas peças chegando.</p></div>';return}
     render();
     var want=new URLSearchParams(location.search).get('p');if(want)openSheet(want);
