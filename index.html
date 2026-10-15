@@ -208,6 +208,20 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .rv-act{display:grid;gap:10px}
 .rv-tools{display:flex;flex-wrap:wrap;gap:4px 16px}
 @media(min-width:720px){#review{width:min(640px,calc(100% - 32px))}}
+/* Menu */
+.menu-btn{width:44px;height:44px;flex:none;display:grid;place-items:center;background:none;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);margin-left:-8px}
+.menu-btn:hover{background:var(--surface-2)}
+#menu{width:min(340px,86vw);height:100dvh;max-height:100dvh;margin:0;inset:0 auto 0 0;border-radius:0 var(--r) var(--r) 0}
+@media(prefers-reduced-motion:no-preference){#menu[open]{animation:drawerIn .3s cubic-bezier(.16,1,.3,1)}@keyframes drawerIn{from{transform:translateX(-24px);opacity:.6}to{transform:none;opacity:1}}}
+.mn{display:grid;gap:14px;align-content:start;padding:18px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.mn-top{display:flex;justify-content:space-between;align-items:center}
+.mn-title{font-family:var(--font-display);font-weight:600;font-size:28px;line-height:1}
+.mn-list{display:grid;gap:8px}
+.mn-item{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink);font-weight:600;font-size:16px;text-align:left;text-decoration:none;cursor:pointer}
+.mn-item:hover{background:var(--surface-2)}
+.mn-item small{font-weight:400;font-size:13px;color:var(--muted)}
+.mn-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.mn h2{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.05}
 /* Toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:var(--r);font-weight:500;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:30}
 </style>
@@ -218,6 +232,7 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 <header class="bar">
   <div class="bar-in gut">
     <div class="brand">
+      <button type="button" class="menu-btn" data-act="menu" aria-label="Abrir menu" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <svg class="brand-mark" viewBox="324.5 122.5 600 600" role="img" aria-label="Olivir Semi Jóias">
         <circle cx="624.5" cy="422.5" r="300" fill="var(--gold)"/>
         <circle cx="624.5" cy="422.5" r="280" fill="none" stroke="var(--cream)" stroke-width="5"/>
@@ -266,6 +281,7 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 
 <dialog id="sheet" aria-labelledby="sheet-title"><div class="s-in" id="sheet-body"></div></dialog>
 <dialog id="review" aria-labelledby="rv-title"><div class="s-in" id="rv-body"></div></dialog>
+<dialog id="menu" aria-label="Menu"><div id="menu-body"></div></dialog>
 
 <script>
 (function(){
@@ -777,6 +793,7 @@ document.addEventListener('click',function(e){
   else if(a==='clear'){S.filter='all';S.q='';$('#q').value='';render()}
   else if(a==='export')exportCsv();
   else if(a==='review')openReview(true);
+  else if(a==='menu')openMenu();
 });
 document.addEventListener('submit',function(e){
   e.preventDefault();
@@ -895,6 +912,66 @@ rvDlg.addEventListener('change',function(e){
 rvDlg.addEventListener('cancel',function(e){if(R.busy)e.preventDefault()});
 rvDlg.addEventListener('close',rvSnoozeSet);
 
+
+/* ---------- Menu: Sobre e Contato ---------- */
+var ABOUT_KEY='ouro-offir:sobre',ABOUT={text:''},menuDlg=$('#menu'),menuBody=$('#menu-body'),M={view:'menu',err:'',busy:false};
+function waHref(){var n=String((CFG&&CFG.whatsapp)||'').replace(/\D/g,'');return n?'https://wa.me/'+n:''}
+function aboutMirror(t){try{localStorage.setItem(ABOUT_KEY,t)}catch(e){}}
+function aboutInit(){
+  try{ABOUT.text=localStorage.getItem(ABOUT_KEY)||''}catch(e){}
+  if(store.fb&&store.mode==='cloud'){
+    store.fb.collection('config').doc('sobre').onSnapshot(function(d){
+      if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
+      var t=d.exists?String(d.data().text||''):'';
+      ABOUT.text=t;aboutMirror(t);
+      if(menuDlg.open&&M.view==='about')renderMenu();
+    },function(){});
+  }
+}
+async function aboutSave(t){
+  if(store.fb&&store.mode==='cloud')await store.fb.collection('config').doc('sobre').set({text:t,updatedAt:new Date().toISOString()});
+  ABOUT.text=t;aboutMirror(t);
+}
+function openMenu(){M={view:'menu',err:'',busy:false};renderMenu();if(!menuDlg.open)menuDlg.showModal()}
+function renderMenu(){
+  var h='<div class="mn">';
+  if(M.view==='menu'){
+    var w=waHref();
+    h+='<div class="mn-top"><span class="mn-title">Menu</span><button type="button" class="link" data-mn="close">Fechar</button></div>'
+      +'<div class="mn-list"><button type="button" class="mn-item" data-mn="about">Sobre</button>'
+      +(w?'<a class="mn-item" href="'+esc(w)+'" target="_blank" rel="noopener">Contato <small>WhatsApp</small></a>':'')+'</div>';
+  }else if(M.view==='about'){
+    h+='<div class="mn-top"><button type="button" class="link" data-mn="back">Voltar</button><button type="button" class="link" data-mn="close">Fechar</button></div>'
+      +'<h2>Sobre</h2>'
+      +(ABOUT.text?'<p class="mn-text">'+esc(ABOUT.text)+'</p>':'<p class="help">Ainda sem texto. Toque em Editar texto para escrever uma pequena apresentação. Ela aparece no menu do catálogo dos compradores.</p>')
+      +'<button type="button" class="btn btn-gold" data-mn="edit">Editar texto</button>';
+  }else{
+    h+='<div class="mn-top"><span class="mn-title">Editar sobre</span></div>'
+      +'<div class="field"><label for="mn-text">Texto que os compradores vão ler</label><textarea id="mn-text" maxlength="800" rows="9"></textarea><span class="help">Até 800 caracteres.</span></div>'
+      +'<p class="err" id="mn-err" role="alert">'+esc(M.err)+'</p>'
+      +'<button type="button" class="btn btn-gold" id="mn-save" data-mn="save">Salvar</button><button type="button" class="btn btn-ghost" data-mn="about">Cancelar</button>';
+  }
+  menuBody.innerHTML=h+'</div>';
+  var ta=$('#mn-text');if(ta){ta.value=M.draft!=null?M.draft:ABOUT.text}
+}
+menuDlg.addEventListener('click',async function(e){
+  if(e.target===menuDlg){menuDlg.close();return}
+  var t=e.target.closest('[data-mn]');if(!t||M.busy)return;
+  var a=t.dataset.mn;
+  if(a==='close')menuDlg.close();
+  else if(a==='back'){M.view='menu';renderMenu()}
+  else if(a==='about'){M.view='about';M.draft=null;M.err='';renderMenu()}
+  else if(a==='edit'){
+    if(store.mode==='offline'){toast('Sem conexão. Volte a ficar online para editar.');return}
+    M.view='edit';M.err='';M.draft=null;renderMenu();var ta=$('#mn-text');if(ta)ta.focus();
+  }
+  else if(a==='save'){
+    var txt=$('#mn-text').value.trim();
+    M.busy=true;t.disabled=true;t.textContent='Salvando…';
+    try{await aboutSave(txt);M.busy=false;M.view='about';M.err='';M.draft=null;renderMenu();toast('Texto salvo')}
+    catch(err){M.busy=false;M.draft=txt;M.err='Não consegui salvar. Confira a conexão e tente de novo.';renderMenu()}
+  }
+});
 /* ---------- Boot ---------- */
 render();
 var NOTICE={
@@ -910,7 +987,7 @@ function showOffline(){
   metaGet().then(function(list){S.pieces=list||[];S.loadErr=!list;S.loaded=true;render()});
 }
 Promise.all([cacheLoad(),initStore()]).then(function(){
-  applyMode();
+  applyMode();aboutInit();
   if(store.mode==='offline'){showOffline();return}
   subscribe(function(list,err){
     if(err){if(store.mode==='cloud')showOffline();else{S.loadErr=true;S.loaded=true;render()}return}
