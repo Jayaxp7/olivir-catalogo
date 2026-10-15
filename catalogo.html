@@ -200,6 +200,21 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .btn-wa{width:100%;text-decoration:none}
 .btn-wa[aria-disabled=true]{opacity:.6;pointer-events:none}
 .count{font-size:13px;color:var(--muted)}
+.state:empty{display:none}
+@media(max-width:420px){
+  .bar-in{gap:8px}
+  .brand{gap:8px}
+  .brand-mark{width:40px;height:40px}
+  .brand-word{height:20px}
+  .brand-sub{font-size:9px;letter-spacing:.3em}
+  .bar .btn{padding:0 12px;font-size:14px}
+  .menu-btn{margin-left:-10px}
+}
+
+.cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cats:empty{display:none}
+.cats .chip{flex:none}
 .s-col{display:grid;gap:8px;align-content:start;min-width:0}
 .gal{display:flex;gap:8px}
 .gal button{width:56px;height:56px;padding:0;border:2px solid transparent;border-radius:var(--r);overflow:hidden;background:var(--surface-2);cursor:pointer}
@@ -244,6 +259,7 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 <main class="gut">
   <section class="controls" id="controls" aria-label="Buscar" hidden>
     <div class="field"><label for="q">Buscar peça</label><input id="q" type="search" placeholder="Ex.: brincos" autocomplete="off"></div>
+    <div class="cats" id="cats" role="group" aria-label="Tipo de joia"></div>
   </section>
   <div class="state" id="state" aria-live="polite"></div>
   <ul class="grid" id="grid"></ul>
@@ -256,7 +272,16 @@ var CFG=window.OLIVIR_CONFIG||{},$=function(s){return document.querySelector(s)}
 var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 var money=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};
 var grid=$('#grid'),stateEl=$('#state'),dlg=$('#sheet'),body=$('#sheet-body');
-var db=null,list=[],q='';
+var db=null,list=[],q='',cat='all';
+var CATS=[['anel','Anéis'],['brinco','Brincos'],['cordao','Cordões e colares'],['pulseira','Pulseiras'],['outros','Outros']];
+var CAT_RULES=[['anel',/\b(anel|aneis|alianca|solitario)/],['brinco',/\b(brinco|argola|ear)/],['cordao',/\b(colar|cordao|cordoes|corrente|gargantilha|choker|pingente)/],['pulseira',/\b(pulseira|bracelete|braceleira|tornozeleira)/]];
+function catOf(p){
+  if(p.category&&CATS.some(function(c){return c[0]===p.category}))return p.category;
+  var n=String(p.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  for(var i=0;i<CAT_RULES.length;i++)if(CAT_RULES[i][1].test(n))return CAT_RULES[i][0];
+  return 'outros';
+}
+
 if(CFG.firebase&&CFG.firebase.apiKey&&window.firebase){window.firebase.initializeApp(CFG.firebase);db=window.firebase.firestore()}
 var photo=function(p){return p.photoData||''};
 function waLink(p){
@@ -268,7 +293,10 @@ function waLink(p){
 function imgHTML(p,lazy){var s=photo(p);return s?'<img src="'+esc(s)+'" alt="'+esc(p.name)+'" loading="'+lazy+'" decoding="async">':'<span class="noimg">Sem foto</span>'}
 function render(){
   var term=q.trim().toLowerCase();
-  var l=list.filter(function(p){return !term||p.name.toLowerCase().indexOf(term)>-1});
+  var present={};list.forEach(function(p){present[catOf(p)]=1});
+  if(cat!=='all'&&!present[cat])cat='all';
+  $('#cats').innerHTML=Object.keys(present).length>1?[['all','Todas']].concat(CATS.filter(function(c){return present[c[0]]})).map(function(c){return '<button type="button" class="chip" data-cat="'+c[0]+'" aria-pressed="'+(c[0]===cat)+'">'+c[1]+'</button>'}).join(''):'';
+  var l=list.filter(function(p){return (cat==='all'||catOf(p)===cat)&&(!term||p.name.toLowerCase().indexOf(term)>-1)});
   var rank=function(p){return p.sold?2:p.reserved?1:0};
   l.sort(function(a,b){return (rank(a)-rank(b))||(b.createdAt-a.createdAt)});
   $('#controls').hidden=!list.length;
@@ -301,12 +329,13 @@ dlg.addEventListener('click',function(e){
   if(g){var im=g.querySelector('img'),ph=$('#s-photo');if(im&&ph){ph.innerHTML='<img src="'+esc(im.getAttribute('src'))+'" alt="">';dlg.querySelectorAll('.gal button').forEach(function(x){x.setAttribute('aria-pressed',String(x===g))})}}
 });
 $('#q').addEventListener('input',function(e){q=e.target.value;render()});
+$('#cats').addEventListener('click',function(e){var t=e.target.closest('[data-cat]');if(t){cat=t.dataset.cat;render()}});
 function skeleton(){stateEl.innerHTML='';grid.innerHTML=Array(6).join('<li class="sk"><span class="sk-ph"></span><span class="sk-l"></span><span class="sk-l s"></span></li>')}
 function load(){
   if(!db){stateEl.innerHTML='<div><h2>Em breve</h2><p>O catálogo ainda não foi configurado.</p></div>';return}
   skeleton();
   db.collection('pecas').get().then(function(sn){
-    list=sn.docs.map(function(d){var o=d.data();return {id:d.id,name:o.name||'',code:o.code||'',price:o.price,photoData:o.photoData||null,photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],reserved:!!o.reserved&&!o.sold,sold:!!o.sold,createdAt:(typeof o.createdAt==='number'?o.createdAt:Date.parse(o.createdAt))||0}});
+    list=sn.docs.map(function(d){var o=d.data();return {id:d.id,name:o.name||'',code:o.code||'',price:o.price,photoData:o.photoData||null,photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],reserved:!!o.reserved&&!o.sold,category:o.category||'',sold:!!o.sold,createdAt:(typeof o.createdAt==='number'?o.createdAt:Date.parse(o.createdAt))||0}});
     if(!list.length){grid.innerHTML='';stateEl.innerHTML='<div><h2>Catálogo vazio</h2><p>Volte em breve, novas peças chegando.</p></div>';return}
     render();
     var want=new URLSearchParams(location.search).get('p');if(want)openSheet(want);
