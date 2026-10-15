@@ -105,7 +105,7 @@ main{max-width:1240px;margin:0 auto;padding-block:8px 40px}
 .field>label,legend{font-size:13px;font-weight:600}
 .help{font-size:13px;color:var(--muted)}
 .err{font-size:13px;color:var(--err);font-weight:500}
-input[type=text],input[type=search],input[type=date],input[type=number],input[type=email],input[type=password],textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--field-line);border-radius:var(--r);background:var(--bg);font-size:16px}
+input[type=text],input[type=search],input[type=date],input[type=number],input[type=email],input[type=password],select,textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--field-line);border-radius:var(--r);background:var(--bg);font-size:16px}
 textarea{resize:vertical;min-height:112px;line-height:1.45}
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 input[aria-invalid=true],textarea[aria-invalid=true]{border-color:var(--err)}
@@ -250,6 +250,21 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .t-status.res{color:var(--gold-text);font-weight:600}
 .s-status.res{color:var(--gold-text)}
 .due-bad{color:var(--err);font-weight:600}
+select{appearance:auto;cursor:pointer}
+@media(max-width:560px){
+  .controls .chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .controls .chip{display:grid;justify-items:center;align-content:center;gap:2px;min-height:54px;padding:6px 2px;font-size:12px;letter-spacing:-.01em}
+  .controls .chip .n{margin:0}
+}
+@media(max-width:420px){
+  .bar-in{gap:8px}
+  .brand{gap:8px}
+  .brand-mark{width:40px;height:40px}
+  .brand-word{height:20px}
+  .brand-sub{font-size:9px;letter-spacing:.3em}
+  .bar .btn{padding:0 12px;font-size:14px}
+  .menu-btn{margin-left:-10px}
+}
 /* Toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:var(--r);font-weight:500;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:30}
 </style>
@@ -325,6 +340,14 @@ var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){r
 var brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 var money=function(n){return brl.format(n||0)};
 var commission=function(n){return Math.round((n||0)*100*0.4)/100};
+var CATS=[['anel','Anéis'],['brinco','Brincos'],['cordao','Cordões e colares'],['pulseira','Pulseiras'],['outros','Outros']];
+var CAT_RULES=[['anel',/\b(anel|aneis|alianca|solitario)/],['brinco',/\b(brinco|argola|ear)/],['cordao',/\b(colar|cordao|cordoes|corrente|gargantilha|choker|pingente)/],['pulseira',/\b(pulseira|bracelete|braceleira|tornozeleira)/]];
+function catOf(p){
+  if(p.category&&CATS.some(function(c){return c[0]===p.category}))return p.category;
+  var n=String(p.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  for(var i=0;i<CAT_RULES.length;i++)if(CAT_RULES[i][1].test(n))return CAT_RULES[i][0];
+  return 'outros';
+}
 var norm=function(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()};
 function fmtDate(iso){
   if(!iso)return '';
@@ -440,9 +463,9 @@ function askLogin(auth){
     });
   });
 }
-function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:o.createdAt,reviewedAt:o.reviewedAt||null,sold:!!o.sold,reserved:!!o.reserved&&!o.sold,reservedFor:'',photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],sale:null}}
+function fbDoc(id,d){var o=d||{};return {id:id,name:o.name,code:o.code,price:Number(o.price),photoId:null,photoData:o.photoData||null,createdAt:o.createdAt,reviewedAt:o.reviewedAt||null,category:o.category||'',sold:!!o.sold,reserved:!!o.reserved&&!o.sold,reservedFor:'',photoExtra:Array.isArray(o.photoExtra)?o.photoExtra:[],sale:null}}
 async function fbSave(p){
-  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,reserved:!!p.reserved&&!p.sold,photoExtra:p.photoExtra||[],createdAt:p.createdAt||new Date().toISOString(),reviewedAt:p.reviewedAt||null});
+  await store.fb.collection('pecas').doc(p.id).set({name:p.name,code:p.code,price:p.price,photoData:p.photoData||null,sold:!!p.sold,reserved:!!p.reserved&&!p.sold,category:p.category||'',photoExtra:p.photoExtra||[],createdAt:p.createdAt||new Date().toISOString(),reviewedAt:p.reviewedAt||null});
   var v=store.fb.collection('vendas').doc(p.id);
   if(p.sold&&p.sale)await v.set(clone(p.sale));
   else if(p.reserved&&p.reservedFor)await v.set({reservedFor:p.reservedFor});
@@ -675,6 +698,7 @@ function pieceFormHTML(p){
     +'<div id="pf-xbox">'+extrasHTML()+'</div></div>'
     +'<div class="form"><div class="s-top"><h2 id="sheet-title" class="s-name">'+(isNew?'Nova peça':'Editar peça')+'</h2><button type="button" class="link" data-act="cancel">Fechar</button></div>'
     +'<div class="field"><label for="pf-name">Nome da peça</label><input id="pf-name" type="text" autocomplete="off" value="'+esc(p?p.name:'')+'" placeholder="Ex.: Anel solitário" data-autofocus><p class="err" id="pf-name-err" hidden></p></div>'
+    +'<div class="field"><label for="pf-cat">Tipo de joia</label><select id="pf-cat"><option value="">Automático (pelo nome)</option>'+CATS.map(function(c){return '<option value="'+c[0]+'"'+(p&&p.category===c[0]?' selected':'')+'>'+c[1]+'</option>'}).join('')+'</select><p class="help">Usado no filtro do catálogo dos compradores.</p></div>'
     +'<div class="field"><label for="pf-code">Código</label><input id="pf-code" type="text" autocomplete="off" autocapitalize="characters" value="'+esc(p?p.code:'')+'" placeholder="Ex.: OO-0142"><p class="err" id="pf-code-err" hidden></p></div>'
     +'<div class="field"><label for="pf-price">Preço em reais</label><input id="pf-price" type="text" inputmode="decimal" autocomplete="off" value="'+esc(p?priceField(p.price):'')+'" placeholder="Ex.: 1.290,00"><p class="err" id="pf-price-err" hidden></p></div>'
     +'<p class="err" id="form-err" role="alert" hidden></p>'
@@ -773,7 +797,7 @@ async function submitPiece(){
     var oldPhoto=next.photoId;
     if(S.pending){var up=await uploadPhoto(S.pending.blob);next.photoId=up.photoId;next.photoData=up.photoData;if(up.photoId)await cachePut(up.photoId,S.pending.blob)}
     else if(S.removePhoto){next.photoId=null;next.photoData=null}
-    next.name=name;next.code=code;next.price=price;next.photoExtra=S.extras.slice();
+    next.name=name;next.code=code;next.price=price;next.category=$('#pf-cat').value||'';next.photoExtra=S.extras.slice();
     await storeSave(next);
     if(oldPhoto&&oldPhoto!==next.photoId)deleteAsset(oldPhoto);
     upsert(next);
